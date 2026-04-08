@@ -63,9 +63,9 @@ async function checkServiceHealth(service: Service): Promise<Service> {
         await eventBridgeClient.send(new ListEventBusesCommand({}));
         return { ...service, status: "running" };
 
-      case "scheduler":
+      /*case "scheduler":
         await schedulerClient.send(new ListScheduleGroupsCommand({}));
-        return { ...service, status: "running" };
+        return { ...service, status: "running" };*/
 
       case "logs":
         await cloudWatchLogsClient.send(

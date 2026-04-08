@@ -11,6 +11,9 @@ import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import { SchedulerClient } from "@aws-sdk/client-scheduler";
 import { CloudFormationClient } from "@aws-sdk/client-cloudformation";
 import { APIGatewayClient } from "@aws-sdk/client-api-gateway";
+import { EC2Client } from "@aws-sdk/client-ec2";
+import { RDSClient } from "@aws-sdk/client-rds";
+ 
 
 const config = {
   endpoint:
@@ -36,3 +39,5 @@ export const eventBridgeClient = new EventBridgeClient(config);
 export const schedulerClient = new SchedulerClient(config);
 export const cloudFormationClient = new CloudFormationClient(config);
 export const apiGatewayClient = new APIGatewayClient(config);
+export const ec2Client = new EC2Client(config);
+export const rdsClient = new RDSClient(config);

@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.Body.transformToByteArray();
+    const buffer = Buffer.from(data); 
 
-    return new NextResponse(data, {
+    return new NextResponse(buffer, {
       headers: {
         "Content-Type": response.ContentType || "application/octet-stream",
         "Content-Disposition": `attachment; filename="${key.split("/").pop()}"`,

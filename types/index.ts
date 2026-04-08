@@ -736,3 +736,73 @@ export interface ApiMethodSetting {
     | "SUCCEED_WITH_RESPONSE_HEADER"
     | "SUCCEED_WITHOUT_RESPONSE_HEADER";
 }
+
+
+// EC2 Types
+export interface EC2Instance {
+  instanceId: string;
+  instanceType: string;
+  state: "pending" | "running" | "shutting-down" | "terminated" | "stopping" | "stopped";
+  stateName?: string;
+  launchTime?: Date;
+  publicIpAddress?: string;
+  privateIpAddress?: string;
+  publicDnsName?: string;
+  privateDnsName?: string;
+  vpcId?: string;
+  subnetId?: string;
+  imageId?: string;
+  keyName?: string;
+  securityGroups?: Array<{
+    groupId: string;
+    groupName: string;
+  }>;
+  tags?: Record<string, string>;
+  platform?: "windows" | string;
+  architecture?: string;
+  hypervisor?: string;
+  virtualizationType?: string;
+  rootDeviceType?: string;
+  rootDeviceName?: string;
+  ebsOptimized?: boolean;
+  enaSupport?: boolean;
+}
+
+// RDS Types
+export interface RDSDBInstance {
+  dbInstanceIdentifier: string;
+  dbInstanceClass: string;
+  engine: string;
+  engineVersion?: string;
+  dbInstanceStatus: string;
+  masterUsername?: string;
+  dbName?: string;
+  allocatedStorage?: number;
+  instanceCreateTime?: Date;
+  availabilityZone?: string;
+  vpcSecurityGroups?: Array<{
+    vpcSecurityGroupId: string;
+    status: string;
+  }>;
+  dbParameterGroups?: Array<{
+    dbParameterGroupName: string;
+    parameterApplyStatus: string;
+  }>;
+  endpoint?: {
+    address?: string;
+    port?: number;
+    hostedZoneId?: string;
+  };
+  multiAZ?: boolean;
+  storageType?: string;
+  iops?: number;
+  publiclyAccessible?: boolean;
+  storageEncrypted?: boolean;
+  kmsKeyId?: string;
+  dbiResourceId?: string;
+  tags?: Record<string, string>;
+  copyTagsToSnapshot?: boolean;
+  monitoringInterval?: number;
+  monitoringRoleArn?: string;
+  enabledCloudwatchLogsExports?: string[];
+}
