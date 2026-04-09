@@ -13,7 +13,12 @@ import { CloudFormationClient } from "@aws-sdk/client-cloudformation";
 import { APIGatewayClient } from "@aws-sdk/client-api-gateway";
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { RDSClient } from "@aws-sdk/client-rds";
- 
+import { ElasticLoadBalancingV2Client } from "@aws-sdk/client-elastic-load-balancing-v2";
+import { ElastiCacheClient } from "@aws-sdk/client-elasticache";
+import { ECSClient } from "@aws-sdk/client-ecs";
+import { Route53Client } from "@aws-sdk/client-route-53";
+import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
+import { EFSClient } from "@aws-sdk/client-efs";
 
 const config = {
   endpoint:
@@ -41,3 +46,9 @@ export const cloudFormationClient = new CloudFormationClient(config);
 export const apiGatewayClient = new APIGatewayClient(config);
 export const ec2Client = new EC2Client(config);
 export const rdsClient = new RDSClient(config);
+export const elbv2Client = new ElasticLoadBalancingV2Client(config);
+export const elastiCacheClient = new ElastiCacheClient(config);
+export const ecsClient = new ECSClient(config);
+export const route53Client = new Route53Client(config);
+export const cognitoClient = new CognitoIdentityProviderClient(config);
+export const efsClient = new EFSClient(config);

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { InstanceList } from "@/components/services/ec2/instance-list";
+import { InstanceListDocker } from "@/components/services/ec2/instance-list-docker";
+import { CreateDockerInstanceDialog } from "@/components/services/ec2/create-docker-instance-dialog";
 import {
   Card,
   CardContent,
@@ -11,11 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Server, RefreshCw } from "lucide-react";
+import { Container, RefreshCw, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function EC2Page() {
   const queryClient = useQueryClient();
+  const [createInstanceOpen, setCreateInstanceOpen] = useState(false);
 
   return (
     <MainLayout>
@@ -29,7 +33,7 @@ export default function EC2Page() {
           </div>
           <Button
             onClick={() =>
-              queryClient.invalidateQueries({ queryKey: ["ec2-instances"] })
+              queryClient.invalidateQueries({ queryKey: ["ec2-docker-instances"] })
             }
             variant="outline"
             size="sm"
@@ -40,24 +44,37 @@ export default function EC2Page() {
         </div>
 
         <Alert>
-          <Server className="h-4 w-4" />
+          <Container className="h-4 w-4" />
           <AlertDescription>
-            EC2 in MiniStack runs actual Docker containers. Each instance is an isolated
-            container that you can manage here or view in Docker Desktop.
+            EC2 instances run as real Docker containers. Each instance is an isolated container
+            that you can start, stop, terminate, and connect to via terminal. View them in Docker Desktop.
           </AlertDescription>
         </Alert>
 
         <Card>
           <CardHeader>
-            <CardTitle>EC2 Instances</CardTitle>
-            <CardDescription>
-              View and manage your EC2 instances
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>EC2 Instances</CardTitle>
+                <CardDescription>
+                  View and manage your EC2 instances
+                </CardDescription>
+              </div>
+              <Button onClick={() => setCreateInstanceOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Instance
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <InstanceList />
+            <InstanceListDocker />
           </CardContent>
         </Card>
+
+        <CreateDockerInstanceDialog
+          open={createInstanceOpen}
+          onOpenChange={setCreateInstanceOpen}
+        />
       </div>
     </MainLayout>
   );

@@ -806,3 +806,405 @@ export interface RDSDBInstance {
   monitoringRoleArn?: string;
   enabledCloudwatchLogsExports?: string[];
 }
+
+// VPC Types
+export interface VPC {
+  vpcId: string;
+  cidrBlock: string;
+  state: "pending" | "available";
+  instanceTenancy?: "default" | "dedicated" | "host";
+  isDefault?: boolean;
+  tags?: Record<string, string>;
+}
+
+export interface Subnet {
+  subnetId: string;
+  vpcId: string;
+  cidrBlock: string;
+  availabilityZone?: string;
+  availabilityZoneId?: string;
+  availableIpAddressCount?: number;
+  state?: "pending" | "available";
+  mapPublicIpOnLaunch?: boolean;
+  mapCustomerOwnedIpOnLaunch?: boolean;
+  defaultForAz?: boolean;
+  tags?: Record<string, string>;
+}
+
+export interface SecurityGroup {
+  groupId: string;
+  groupName: string;
+  description?: string;
+  vpcId?: string;
+  ownerId?: string;
+  tags?: Record<string, string>;
+  ipPermissions?: SecurityGroupRule[];
+  ipPermissionsEgress?: SecurityGroupRule[];
+}
+
+export interface SecurityGroupRule {
+  ipProtocol: string;
+  fromPort?: number;
+  toPort?: number;
+  userIdGroupPairs?: Array<{
+    groupId?: string;
+    groupName?: string;
+    userId?: string;
+    vpcId?: string;
+    vpcPeeringConnectionId?: string;
+  }>;
+  ipRanges?: Array<{ cidrIp?: string; description?: string }>;
+  ipv6Ranges?: Array<{ cidrIpv6?: string; description?: string }>;
+  prefixListIds?: Array<{ prefixListId?: string; description?: string }>;
+  description?: string;
+}
+
+export interface InternetGateway {
+  internetGatewayId: string;
+  attachments?: Array<{
+    vpcId?: string;
+    state?: "attaching" | "attached" | "detaching" | "detached";
+  }>;
+  tags?: Record<string, string>;
+}
+
+export interface RouteTable {
+  routeTableId: string;
+  vpcId: string;
+  routes?: Route[];
+  associations?: RouteTableAssociation[];
+  tags?: Record<string, string>;
+  propagatingVgws?: string[];
+}
+
+export interface Route {
+  destinationCidrBlock?: string;
+  destinationIpv6CidrBlock?: string;
+  destinationPrefixListId?: string;
+  gatewayId?: string;
+  instanceId?: string;
+  natGatewayId?: string;
+  transitGatewayId?: string;
+  networkInterfaceId?: string;
+  origin?: "CreateRouteTable" | "CreateRoute" | "EnableVgwRoutePropagation";
+  state?: "active" | "blackhole";
+}
+
+export interface RouteTableAssociation {
+  routeTableAssociationId?: string;
+  routeTableId?: string;
+  subnetId?: string;
+  main?: boolean;
+  associationState?: {
+    state?: "associating" | "associated" | "disassociating" | "disassociated" | "failed";
+    statusMessage?: string;
+  };
+}
+
+export interface NATGateway {
+  natGatewayId: string;
+  subnetId: string;
+  vpcId: string;
+  state?: "pending" | "failed" | "available" | "deleting" | "deleted";
+  natGatewayAddresses?: Array<{
+    allocationId?: string;
+    networkInterfaceId?: string;
+    privateIp?: string;
+    publicIp?: string;
+  }>;
+  createTime?: Date;
+  deleteTime?: Date;
+  tags?: Record<string, string>;
+}
+
+// Load Balancer Types (ELBv2)
+export interface LoadBalancer {
+  loadBalancerArn?: string;
+  loadBalancerName: string;
+  dnsName?: string;
+  canonicalHostedZoneId?: string;
+  createdTime?: Date;
+  loadBalancerType?: "application" | "network" | "gateway";
+  scheme?: "internet-facing" | "internal";
+  vpcId?: string;
+  state?: {
+    code?: "active" | "provisioning" | "active_impaired" | "failed";
+    reason?: string;
+  };
+  availabilityZones?: Array<{
+    zoneName?: string;
+    subnetId?: string;
+    loadBalancerAddresses?: Array<{
+      ipAddress?: string;
+      allocationId?: string;
+      ipv6Address?: string;
+    }>;
+  }>;
+  securityGroups?: string[];
+  ipAddressType?: "ipv4" | "dualstack" | "dualstack-without-public-ipv4";
+  tags?: Record<string, string>;
+}
+
+export interface TargetGroup {
+  targetGroupArn?: string;
+  targetGroupName: string;
+  protocol?: "HTTP" | "HTTPS" | "TCP" | "TLS" | "UDP" | "TCP_UDP" | "GENEVE";
+  port?: number;
+  vpcId?: string;
+  healthCheckProtocol?: string;
+  healthCheckPort?: string;
+  healthCheckEnabled?: boolean;
+  healthCheckIntervalSeconds?: number;
+  healthCheckTimeoutSeconds?: number;
+  healthyThresholdCount?: number;
+  unhealthyThresholdCount?: number;
+  targetType?: "instance" | "ip" | "lambda" | "alb";
+  tags?: Record<string, string>;
+}
+
+export interface Listener {
+  listenerArn?: string;
+  loadBalancerArn?: string;
+  port: number;
+  protocol?: "HTTP" | "HTTPS" | "TCP" | "TLS" | "UDP" | "TCP_UDP";
+  certificates?: Array<{ certificateArn?: string; isDefault?: boolean }>;
+  sslPolicy?: string;
+  defaultActions?: ListenerAction[];
+}
+
+export interface ListenerAction {
+  type: "forward" | "authenticate-oidc" | "authenticate-cognito" | "redirect" | "fixed-response";
+  targetGroupArn?: string;
+  redirectConfig?: any;
+  fixedResponseConfig?: any;
+  authenticateOidcConfig?: any;
+  authenticateCognitoConfig?: any;
+  forwardConfig?: any;
+}
+
+// ElastiCache Types
+export interface ElastiCacheCluster {
+  cacheClusterId: string;
+  cacheNodeType?: string;
+  engine?: "redis" | "memcached";
+  engineVersion?: string;
+  cacheClusterStatus?: string;
+  numCacheNodes?: number;
+  preferredAvailabilityZone?: string;
+  cacheClusterCreateTime?: Date;
+  preferredMaintenanceWindow?: string;
+  pendingModifiedValues?: any;
+  notificationConfiguration?: any;
+  cacheSecurityGroups?: string[];
+  cacheParameterGroup?: any;
+  cacheSubnetGroupName?: string;
+  cacheNodes?: Array<{
+    cacheNodeId?: string;
+    cacheNodeStatus?: string;
+    cacheNodeCreateTime?: Date;
+    endpoint?: { address?: string; port?: number };
+    parameterGroupStatus?: string;
+  }>;
+  autoMinorVersionUpgrade?: boolean;
+  securityGroups?: Array<{ securityGroupId?: string; status?: string }>;
+  replicationGroupId?: string;
+  snapshotRetentionLimit?: number;
+  snapshotWindow?: string;
+  authTokenEnabled?: boolean;
+  transitEncryptionEnabled?: boolean;
+  atRestEncryptionEnabled?: boolean;
+  arn?: string;
+}
+
+// ECS Types
+export interface ECSCluster {
+  clusterArn?: string;
+  clusterName: string;
+  status?: string;
+  registeredContainerInstancesCount?: number;
+  runningTasksCount?: number;
+  pendingTasksCount?: number;
+  activeServicesCount?: number;
+  statistics?: Array<{ name?: string; value?: string }>;
+  tags?: Record<string, string>;
+  settings?: any[];
+  capacityProviders?: string[];
+  defaultCapacityProviderStrategy?: any[];
+  attachments?: any[];
+  attachmentsStatus?: string;
+}
+
+export interface ECSService {
+  serviceArn?: string;
+  serviceName: string;
+  clusterArn?: string;
+  status?: string;
+  desiredCount?: number;
+  runningCount?: number;
+  pendingCount?: number;
+  launchType?: "EC2" | "FARGATE" | "EXTERNAL";
+  capacityProviderStrategy?: any[];
+  platformVersion?: string;
+  taskDefinition?: string;
+  deploymentConfiguration?: any;
+  deployments?: any[];
+  roleArn?: string;
+  events?: any[];
+  createdAt?: Date;
+  placementConstraints?: any[];
+  placementStrategy?: any[];
+  networkConfiguration?: any;
+  healthCheckGracePeriodSeconds?: number;
+  schedulingStrategy?: "REPLICA" | "DAEMON";
+  deploymentController?: any;
+  tags?: Record<string, string>;
+  propagateTags?: string;
+  enableECSManagedTags?: boolean;
+  pendingDeletePendingCount?: number;
+}
+
+export interface ECSTask {
+  taskArn?: string;
+  clusterArn?: string;
+  taskDefinitionArn?: string;
+  containerInstanceArn?: string;
+  overrides?: any;
+  lastStatus?: string;
+  desiredStatus?: string;
+  cpu?: string;
+  memory?: string;
+  containers?: any[];
+  startedAt?: Date;
+  stoppedAt?: Date;
+  startedBy?: string;
+  stoppedReason?: string;
+  createdAt?: Date;
+  launchType?: "EC2" | "FARGATE" | "EXTERNAL";
+  platformVersion?: string;
+  attachments?: any[];
+  healthStatus?: string;
+  tags?: Record<string, string>;
+  ephemeralStorage?: any;
+}
+
+// Route53 Types
+export interface Route53HostedZone {
+  id: string;
+  name: string;
+  callerReference?: string;
+  config?: {
+    comment?: string;
+    privateZone?: boolean;
+  };
+  resourceRecordSetCount?: number;
+  linkedService?: {
+    servicePrincipal?: string;
+    description?: string;
+  };
+}
+
+export interface Route53RecordSet {
+  name: string;
+  type: "A" | "AAAA" | "CNAME" | "MX" | "NS" | "PTR" | "SOA" | "SPF" | "SRV" | "TXT" | "CAA" | "DS";
+  setIdentifier?: string;
+  weight?: number;
+  region?: string;
+  geoLocation?: any;
+  failover?: string;
+  multiValueAnswer?: boolean;
+  ttl?: number;
+  resourceRecords?: Array<{ value?: string }>;
+  aliasTarget?: {
+    hostedZoneId?: string;
+    dnsName?: string;
+    evaluateTargetHealth?: boolean;
+  };
+  healthCheckId?: string;
+  trafficPolicyInstanceId?: string;
+}
+
+// Cognito Types
+export interface CognitoUserPool {
+  id: string;
+  name: string;
+  status?: string;
+  lambdaConfig?: any;
+  lastModifiedDate?: Date;
+  creationDate?: Date;
+  schemaAttributes?: any[];
+  autoVerifiedAttributes?: string[];
+  mfaConfiguration?: "OFF" | "ON" | "OPTIONAL";
+  estimatedNumberOfUsers?: number;
+  smsConfiguration?: any;
+  emailConfiguration?: any;
+  policies?: any;
+  adminCreateUserConfig?: any;
+  userPoolAddOns?: any;
+  accountRecoverySetting?: any;
+}
+
+export interface CognitoUserPoolClient {
+  clientId: string;
+  clientName?: string;
+  userPoolId?: string;
+  clientSecret?: string;
+  lastModifiedDate?: Date;
+  creationDate?: Date;
+  refreshTokenValidity?: number;
+  accessTokenValidity?: number;
+  idTokenValidity?: number;
+  tokenValidityUnits?: any;
+  readAttributes?: string[];
+  writeAttributes?: string[];
+  explicitAuthFlows?: string[];
+  supportedIdentityProviders?: string[];
+  callbackURLs?: string[];
+  logoutURLs?: string[];
+  defaultRedirectURI?: string;
+  allowedOAuthFlows?: string[];
+  allowedOAuthScopes?: string[];
+  allowedOAuthFlowsUserPoolClient?: boolean;
+  analyticsConfiguration?: any;
+  preventUserExistenceErrors?: string;
+  enableTokenRevocation?: boolean;
+  enablePropagateAdditionalUserContextData?: boolean;
+  authSessionValidity?: number;
+}
+
+// EFS Types
+export interface EFSFileSystem {
+  fileSystemId: string;
+  creationToken?: string;
+  ownerId?: string;
+  creationTime?: Date;
+  lifeCycleState?: "creating" | "available" | "updating" | "deleting" | "deleted";
+  name?: string;
+  numberOfMountTargets?: number;
+  sizeInBytes?: {
+    value?: number;
+    timestamp?: Date;
+    valueInIA?: number;
+    valueInStandard?: number;
+  };
+  performanceMode?: "generalPurpose" | "maxIO";
+  encrypted?: boolean;
+  kmsKeyId?: string;
+  throughputMode?: "bursting" | "provisioned" | "elastic";
+  provisionedThroughputInMibps?: number;
+  availabilityZoneId?: string;
+  availabilityZoneName?: string;
+  tags?: Record<string, string>;
+}
+
+export interface EFSMountTarget {
+  mountTargetId: string;
+  fileSystemId: string;
+  subnetId: string;
+  ipAddress?: string;
+  ownerId?: string;
+  lifeCycleState?: "creating" | "available" | "updating" | "deleting" | "deleted" | "error";
+  networkInterfaceId?: string;
+  availabilityZoneId?: string;
+  availabilityZoneName?: string;
+  vpcId?: string;
+}

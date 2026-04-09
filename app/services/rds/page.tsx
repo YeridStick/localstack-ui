@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { DBInstanceList } from "@/components/services/rds/db-instance-list";
+import { CreateDBDialog } from "@/components/services/rds/create-db-dialog";
 import {
   Card,
   CardContent,
@@ -11,11 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Database, RefreshCw } from "lucide-react";
+import { Database, RefreshCw, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function RDSPage() {
   const queryClient = useQueryClient();
+  const [createDBOpen, setCreateDBOpen] = useState(false);
 
   return (
     <MainLayout>
@@ -49,15 +52,28 @@ export default function RDSPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>RDS Instances</CardTitle>
-            <CardDescription>
-              View and manage your database instances
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>RDS Instances</CardTitle>
+                <CardDescription>
+                  View and manage your database instances
+                </CardDescription>
+              </div>
+              <Button onClick={() => setCreateDBOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Database
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <DBInstanceList />
           </CardContent>
         </Card>
+
+        <CreateDBDialog
+          open={createDBOpen}
+          onOpenChange={setCreateDBOpen}
+        />
       </div>
     </MainLayout>
   );

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import {
-  useEC2Instances,
-  useStartInstance,
-  useStopInstance,
-  useTerminateInstance,
-} from "@/hooks/use-ec2";
+  useDockerInstances,
+  useControlDockerInstance,
+  useTerminateDockerInstance,
+  DockerInstance,
+} from "@/hooks/use-ec2-docker";
 import {
   Table,
   TableBody,
@@ -34,9 +34,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Play, Square, Trash2, Server, Terminal } from "lucide-react";
-import { formatDistanceToNow } from "@/lib/utils";
-import { EC2Instance } from "@/types";
+import {
+  MoreVertical,
+  Play,
+  Square,
+  Trash2,
+  Server,
+  Terminal,
+  Container,
+} from "lucide-react";
 import { InstanceTerminal } from "./instance-terminal";
 
 function getStateColor(state: string) {
@@ -48,9 +54,6 @@ function getStateColor(state: string) {
     case "pending":
     case "stopping":
       return "bg-blue-500";
-    case "shutting-down":
-    case "terminated":
-      return "bg-red-500";
     default:
       return "bg-gray-500";
   }
@@ -65,30 +68,26 @@ function InstanceStateBadge({ state }: { state: string }) {
   );
 }
 
-export function InstanceList() {
-  const { data: instances, isLoading } = useEC2Instances();
-  const startInstance = useStartInstance();
-  const stopInstance = useStopInstance();
-  const terminateInstance = useTerminateInstance();
-  
-  const [selectedInstance, setSelectedInstance] = useState<EC2Instance | null>(null);
+export function InstanceListDocker() {
+  const { data: instances, isLoading } = useDockerInstances();
+  const controlInstance = useControlDockerInstance();
+  const terminateInstance = useTerminateDockerInstance();
+
+  const [selectedInstance, setSelectedInstance] = useState<DockerInstance | null>(null);
   const [action, setAction] = useState<"start" | "stop" | "terminate" | null>(null);
-  const [connectInstance, setConnectInstance] = useState<EC2Instance | null>(null);
+  const [connectInstance, setConnectInstance] = useState<DockerInstance | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
 
   const handleAction = async () => {
     if (!selectedInstance || !action) return;
 
-    switch (action) {
-      case "start":
-        await startInstance.mutateAsync(selectedInstance.instanceId);
-        break;
-      case "stop":
-        await stopInstance.mutateAsync(selectedInstance.instanceId);
-        break;
-      case "terminate":
-        await terminateInstance.mutateAsync(selectedInstance.instanceId);
-        break;
+    if (action === "terminate") {
+      await terminateInstance.mutateAsync(selectedInstance.instanceId);
+    } else {
+      await controlInstance.mutateAsync({
+        instanceId: selectedInstance.instanceId,
+        action,
+      });
     }
     setSelectedInstance(null);
     setAction(null);
@@ -107,10 +106,10 @@ export function InstanceList() {
   if (!instances || instances.length === 0) {
     return (
       <div className="text-center py-12">
-        <Server className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <Container className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-muted-foreground">No EC2 instances found</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Create instances using AWS CLI or MiniStack commands
+          Create Docker-based instances to get started
         </p>
       </div>
     );
@@ -122,30 +121,32 @@ export function InstanceList() {
         <TableHeader>
           <TableRow>
             <TableHead>Instance ID</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Image</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>State</TableHead>
-            <TableHead>Public IP</TableHead>
-            <TableHead>Launched</TableHead>
+            <TableHead>Container ID</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {instances.map((instance) => (
             <TableRow key={instance.instanceId}>
-              <TableCell className="font-medium">{instance.instanceId}</TableCell>
+              <TableCell className="font-medium font-mono text-xs">
+                {instance.instanceId}
+              </TableCell>
+              <TableCell>{instance.name}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="font-mono text-xs">
+                  {instance.image}
+                </Badge>
+              </TableCell>
               <TableCell>{instance.instanceType}</TableCell>
               <TableCell>
                 <InstanceStateBadge state={instance.state} />
               </TableCell>
-              <TableCell>
-                {instance.publicIpAddress || (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {instance.launchTime
-                  ? `${formatDistanceToNow(new Date(instance.launchTime))} ago`
-                  : "-"}
+              <TableCell className="font-mono text-xs">
+                {instance.containerId?.slice(0, 12)}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
@@ -176,6 +177,19 @@ export function InstanceList() {
                       Stop
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      disabled={instance.state !== "running"}
+                      onClick={() => {
+                        setConnectInstance({
+                          ...instance,
+                          state: instance.state as any,
+                        });
+                        setTerminalOpen(true);
+                      }}
+                    >
+                      <Terminal className="mr-2 h-4 w-4" />
+                      Connect (Terminal)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       className="text-destructive"
                       onClick={() => {
                         setSelectedInstance(instance);
@@ -184,16 +198,6 @@ export function InstanceList() {
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Terminate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={instance.state !== "running"}
-                      onClick={() => {
-                        setConnectInstance(instance);
-                        setTerminalOpen(true);
-                      }}
-                    >
-                      <Terminal className="mr-2 h-4 w-4" />
-                      Connect
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -213,19 +217,22 @@ export function InstanceList() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {action === "terminate" ? "Terminate Instance" : `${action?.charAt(0).toUpperCase()}${action?.slice(1)} Instance`}
+              {action === "terminate"
+                ? "Terminate Instance"
+                : `${action?.charAt(0).toUpperCase()}${action?.slice(1)} Instance`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {action === "terminate" ? (
                 <>
                   Are you sure you want to terminate instance{" "}
-                  <strong>{selectedInstance?.instanceId}</strong>? This action cannot be
-                  undone and the instance will be permanently deleted.
+                  <strong>{selectedInstance?.name}</strong> ({selectedInstance?.instanceId})?
+                  <br />
+                  This will stop and remove the Docker container permanently.
                 </>
               ) : (
                 <>
                   Are you sure you want to {action} instance{" "}
-                  <strong>{selectedInstance?.instanceId}</strong>?
+                  <strong>{selectedInstance?.name}</strong>?
                 </>
               )}
             </AlertDialogDescription>
@@ -234,16 +241,31 @@ export function InstanceList() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleAction}
-              className={action === "terminate" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              className={
+                action === "terminate"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : ""
+              }
             >
-              {action === "terminate" ? "Terminate Instance" : `${action?.charAt(0).toUpperCase()}${action?.slice(1)} Instance`}
+              {action === "terminate" ? "Terminate" : `${action?.charAt(0).toUpperCase()}${action?.slice(1)}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <InstanceTerminal
-        instance={connectInstance}
+        instance={
+          connectInstance
+            ? {
+                instanceId: connectInstance.instanceId,
+                instanceType: connectInstance.instanceType,
+                state: connectInstance.state as "running" | "stopped" | "pending" | "shutting-down" | "terminated" | "stopping",
+                publicIpAddress: connectInstance.publicIpAddress,
+                containerId: connectInstance.containerId,
+                name: connectInstance.name,
+              }
+            : null
+        }
         open={terminalOpen}
         onOpenChange={setTerminalOpen}
       />

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { DescribeDBInstancesCommand } from "@aws-sdk/client-rds";
+import { NextRequest, NextResponse } from "next/server";
+import { DescribeDBInstancesCommand, CreateDBInstanceCommand } from "@aws-sdk/client-rds";
 import { rdsClient } from "@/lib/aws-config";
 
 // GET /api/rds - List all RDS instances
@@ -52,6 +52,47 @@ export async function GET() {
     console.error("Error listing RDS instances:", error);
     return NextResponse.json(
       { error: error.message || "Failed to list RDS instances" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/rds - Create RDS instance
+export async function POST(request: NextRequest) {
+  try {
+    const {
+      dbInstanceIdentifier,
+      engine,
+      dbInstanceClass,
+      masterUsername,
+      masterUserPassword,
+      allocatedStorage,
+      dbName,
+      multiAZ,
+      publiclyAccessible,
+      storageEncrypted,
+    } = await request.json();
+
+    await rdsClient.send(
+      new CreateDBInstanceCommand({
+        DBInstanceIdentifier: dbInstanceIdentifier,
+        Engine: engine,
+        DBInstanceClass: dbInstanceClass,
+        MasterUsername: masterUsername,
+        MasterUserPassword: masterUserPassword,
+        AllocatedStorage: allocatedStorage,
+        DBName: dbName,
+        MultiAZ: multiAZ,
+        PubliclyAccessible: publiclyAccessible,
+        StorageEncrypted: storageEncrypted,
+      })
+    );
+
+    return NextResponse.json({ success: true, dbInstanceIdentifier });
+  } catch (error: any) {
+    console.error("Error creating RDS instance:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to create database" },
       { status: 500 }
     );
   }

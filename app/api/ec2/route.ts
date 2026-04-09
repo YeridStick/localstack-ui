@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { DescribeInstancesCommand } from "@aws-sdk/client-ec2";
+import { NextRequest, NextResponse } from "next/server";
+import { DescribeInstancesCommand, RunInstancesCommand } from "@aws-sdk/client-ec2";
 import { ec2Client } from "@/lib/aws-config";
 
 // GET /api/ec2 - List all EC2 instances
@@ -45,6 +45,60 @@ export async function GET() {
     console.error("Error listing EC2 instances:", error);
     return NextResponse.json(
       { error: error.message || "Failed to list EC2 instances" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/ec2 - Create EC2 instance
+export async function POST(request: NextRequest) {
+  try {
+    const {
+      imageId,
+      instanceType,
+      keyName,
+      subnetId,
+      securityGroupIds,
+      volumeSize,
+      minCount = 1,
+      maxCount = 1,
+    } = await request.json();
+
+    const response = await ec2Client.send(
+      new RunInstancesCommand({
+        ImageId: imageId,
+        InstanceType: instanceType,
+        KeyName: keyName,
+        SubnetId: subnetId,
+        SecurityGroupIds: securityGroupIds,
+        MinCount: minCount,
+        MaxCount: maxCount,
+        BlockDeviceMappings: volumeSize
+          ? [
+              {
+                DeviceName: "/dev/sda1",
+                Ebs: {
+                  VolumeSize: volumeSize,
+                  VolumeType: "gp2",
+                  DeleteOnTermination: true,
+                },
+              },
+            ]
+          : undefined,
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      instances: response.Instances?.map((i) => ({
+        instanceId: i.InstanceId,
+        state: i.State?.Name,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Error creating EC2 instance:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to create instance" },
       { status: 500 }
     );
   }
