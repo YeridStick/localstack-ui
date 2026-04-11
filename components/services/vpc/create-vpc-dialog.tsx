@@ -27,7 +27,7 @@ export function CreateVPCDialog({ open, onOpenChange }: CreateVPCDialogProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const tags = name ? { Name: name } : undefined;
-    await createVPC.mutateAsync({ cidrBlock, tags });
+    await createVPC.mutateAsync({ cidrBlock, name: name || "my-vpc", tags });
     onOpenChange(false);
     setCidrBlock("10.0.0.0/16");
     setName("");

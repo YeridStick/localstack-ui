@@ -42,8 +42,10 @@ import {
   Server,
   Terminal,
   Container,
+  Network,
 } from "lucide-react";
 import { InstanceTerminal } from "./instance-terminal";
+import { MoveToVPCDialog } from "./move-to-vpc-dialog";
 
 function getStateColor(state: string) {
   switch (state) {
@@ -77,6 +79,10 @@ export function InstanceListDocker() {
   const [action, setAction] = useState<"start" | "stop" | "terminate" | null>(null);
   const [connectInstance, setConnectInstance] = useState<DockerInstance | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
+  const [instanceToTerminate, setInstanceToTerminate] = useState<string | null>(null);
+  const [moveVpcDialogOpen, setMoveVpcDialogOpen] = useState(false);
+  const [instanceToMove, setInstanceToMove] = useState<DockerInstance | null>(null);
 
   const handleAction = async () => {
     if (!selectedInstance || !action) return;
@@ -190,14 +196,23 @@ export function InstanceListDocker() {
                       Connect (Terminal)
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="text-destructive"
                       onClick={() => {
-                        setSelectedInstance(instance);
-                        setAction("terminate");
+                        setInstanceToTerminate(instance.instanceId);
+                        setTerminateDialogOpen(true);
                       }}
+                      className="text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Terminate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setInstanceToMove(instance);
+                        setMoveVpcDialogOpen(true);
+                      }}
+                    >
+                      <Network className="mr-2 h-4 w-4" />
+                      Move to VPC
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -254,20 +269,16 @@ export function InstanceListDocker() {
       </AlertDialog>
 
       <InstanceTerminal
-        instance={
-          connectInstance
-            ? {
-                instanceId: connectInstance.instanceId,
-                instanceType: connectInstance.instanceType,
-                state: connectInstance.state as "running" | "stopped" | "pending" | "shutting-down" | "terminated" | "stopping",
-                publicIpAddress: connectInstance.publicIpAddress,
-                containerId: connectInstance.containerId,
-                name: connectInstance.name,
-              }
-            : null
-        }
+        instance={connectInstance}
         open={terminalOpen}
         onOpenChange={setTerminalOpen}
+      />
+
+      <MoveToVPCDialog
+        open={moveVpcDialogOpen}
+        onOpenChange={setMoveVpcDialogOpen}
+        instanceId={instanceToMove?.instanceId || ""}
+        currentVpcId={instanceToMove?.vpcId}
       />
     </>
   );

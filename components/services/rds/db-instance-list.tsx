@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRDSInstances, useDeleteRDSInstance } from "@/hooks/use-rds";
+import { RDSInstance } from "@/types/rds";
 import {
   Table,
   TableBody,
@@ -28,9 +29,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Trash2, Database, Eye } from "lucide-react";
+import { MoreVertical, Trash2, Database, Eye, Copy, ExternalLink, Network } from "lucide-react";
 import { formatDistanceToNow } from "@/lib/utils";
-import { RDSDBInstance } from "@/types";
+import { MoveRDSToVPCDialog } from "./move-to-vpc-dialog";
 
 function StatusBadge({ status }: { status: string }) {
   const getColor = () => {
@@ -59,15 +60,20 @@ export function DBInstanceList() {
   const { data: instances, isLoading } = useRDSInstances();
   const deleteInstance = useDeleteRDSInstance();
   
-  const [instanceToDelete, setInstanceToDelete] = useState<RDSDBInstance | null>(null);
+  const [instanceToDelete, setInstanceToDelete] = useState<RDSInstance | null>(null);
+  const [instanceToView, setInstanceToView] = useState<RDSInstance | null>(null);
+  const [moveVpcDialogOpen, setMoveVpcDialogOpen] = useState(false);
+  const [instanceToMove, setInstanceToMove] = useState<RDSInstance | null>(null);
 
   const handleDelete = async () => {
     if (!instanceToDelete) return;
 
-    await deleteInstance.mutateAsync({
-      dbInstanceIdentifier: instanceToDelete.dbInstanceIdentifier,
-    });
+    await deleteInstance.mutateAsync(instanceToDelete.id);
     setInstanceToDelete(null);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
   if (isLoading) {
@@ -102,35 +108,45 @@ export function DBInstanceList() {
             <TableHead>Class</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Endpoint</TableHead>
+            <TableHead>Container ID</TableHead>
             <TableHead>Created</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {instances.map((instance) => (
-            <TableRow key={instance.dbInstanceIdentifier}>
+          {instances.map((instance, index) => (
+            <TableRow key={instance.id || `rds-${index}`}>
               <TableCell className="font-medium">
-                {instance.dbInstanceIdentifier}
+                {instance.id}
               </TableCell>
               <TableCell>
                 {instance.engine} {instance.engineVersion}
               </TableCell>
-              <TableCell>{instance.dbInstanceClass}</TableCell>
+              <TableCell>{instance.instanceClass}</TableCell>
               <TableCell>
-                <StatusBadge status={instance.dbInstanceStatus} />
+                <StatusBadge status={instance.status} />
               </TableCell>
               <TableCell>
                 {instance.endpoint ? (
                   <span className="text-sm font-mono">
-                    {instance.endpoint.address}:{instance.endpoint.port}
+                    {instance.endpoint}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">-</span>
                 )}
               </TableCell>
               <TableCell>
-                {instance.instanceCreateTime
-                  ? `${formatDistanceToNow(new Date(instance.instanceCreateTime))} ago`
+                {instance.containerId ? (
+                  <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                    {instance.containerId.substring(0, 12)}
+                  </code>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {instance.createdAt
+                  ? `${formatDistanceToNow(new Date(instance.createdAt))} ago`
                   : "-"}
               </TableCell>
               <TableCell className="text-right">
@@ -141,12 +157,25 @@ export function DBInstanceList() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setInstanceToView(instance)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Connection
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={() => setInstanceToDelete(instance)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Instance
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setInstanceToMove(instance);
+                        setMoveVpcDialogOpen(true);
+                      }}
+                    >
+                      <Network className="mr-2 h-4 w-4" />
+                      Move to VPC
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -165,7 +194,7 @@ export function DBInstanceList() {
             <AlertDialogTitle>Delete RDS Instance</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete the RDS instance{" "}
-              <strong>{instanceToDelete?.dbInstanceIdentifier}</strong>? This action
+              <strong>{instanceToDelete?.id}</strong>? This action
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -180,6 +209,91 @@ export function DBInstanceList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Connection Details Dialog */}
+      <AlertDialog
+        open={!!instanceToView}
+        onOpenChange={() => setInstanceToView(null)}
+      >
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Database Connection Details</AlertDialogTitle>
+            <AlertDialogDescription>
+              Use these credentials to connect to your database instance.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {instanceToView && (
+            <div className="space-y-4 my-4">
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-muted-foreground">Endpoint:</span>
+                <span className="col-span-2 font-mono">{instanceToView.endpoint}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-muted-foreground">Port:</span>
+                <span className="col-span-2 font-mono">5432</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-muted-foreground">Database:</span>
+                <span className="col-span-2 font-mono">{instanceToView.dbName || "postgres"}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-muted-foreground">Username:</span>
+                <span className="col-span-2 font-mono">{instanceToView.masterUsername}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-muted-foreground">Password:</span>
+                <span className="col-span-2 font-mono">{instanceToView.masterUserPassword}</span>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <p className="text-sm font-medium mb-2">Connection Command:</p>
+                <div className="bg-muted p-3 rounded-md relative group">
+                  <code className="text-xs font-mono break-all">
+                    PGPASSWORD="{instanceToView.masterUserPassword}" psql -h {instanceToView.endpoint?.split(":")[0]} -p 5432 -U {instanceToView.masterUsername} -d {instanceToView.dbName || "postgres"}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(`PGPASSWORD="${instanceToView.masterUserPassword}" psql -h ${instanceToView.endpoint?.split(":")[0]} -p 5432 -U ${instanceToView.masterUsername} -d ${instanceToView.dbName || "postgres"}`)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="pt-2">
+                <p className="text-sm font-medium mb-2">Connection String:</p>
+                <div className="bg-muted p-3 rounded-md relative group">
+                  <code className="text-xs font-mono break-all">
+                    postgresql://{instanceToView.masterUsername}:{instanceToView.masterUserPassword}@{instanceToView.endpoint}/{instanceToView.dbName || "postgres"}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => copyToClipboard(`postgresql://${instanceToView.masterUsername}:${instanceToView.masterUserPassword}@${instanceToView.endpoint}/${instanceToView.dbName || "postgres"}`)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <MoveRDSToVPCDialog
+        open={moveVpcDialogOpen}
+        onOpenChange={setMoveVpcDialogOpen}
+        rdsId={instanceToMove?.id || ""}
+        currentVpcId={instanceToMove?.vpcId}
+      />
     </>
   );
 }

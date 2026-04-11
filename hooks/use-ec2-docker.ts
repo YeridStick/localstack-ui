@@ -14,12 +14,12 @@ export interface DockerInstance {
   launchTime?: string;
 }
 
-// List Docker-based EC2 instances (manual refresh only)
+// List EC2 instances from miniStack (manual refresh only)
 export function useDockerInstances() {
   return useQuery({
-    queryKey: ["ec2-docker-instances"],
+    queryKey: ["ec2-instances"],
     queryFn: async () => {
-      const response = await fetch("/api/ec2/docker");
+      const response = await fetch("/api/ec2/instances");
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to fetch instances");
@@ -42,11 +42,12 @@ export function useCreateDockerInstance() {
       image: string;
       instanceType?: string;
       name?: string;
+      vpcId?: string;
       ports?: string[];
       env?: string[];
       volumeSize?: number;
     }) => {
-      const response = await fetch("/api/ec2/docker", {
+      const response = await fetch("/api/ec2/instances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -58,7 +59,7 @@ export function useCreateDockerInstance() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ec2-docker-instances"] });
+      queryClient.invalidateQueries({ queryKey: ["ec2-instances"] });
       toast.success("EC2 instance created successfully");
     },
     onError: (error: any) => {
@@ -78,7 +79,7 @@ export function useControlDockerInstance() {
       instanceId: string;
       action: "start" | "stop";
     }) => {
-      const response = await fetch("/api/ec2/docker", {
+      const response = await fetch("/api/ec2/instances", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instanceId, action }),
@@ -90,7 +91,7 @@ export function useControlDockerInstance() {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["ec2-docker-instances"] });
+      queryClient.invalidateQueries({ queryKey: ["ec2-instances"] });
       toast.success(`Instance ${variables.action}ed successfully`);
     },
     onError: (error: any) => {
@@ -105,7 +106,7 @@ export function useTerminateDockerInstance() {
   return useMutation({
     mutationFn: async (instanceId: string) => {
       const response = await fetch(
-        `/api/ec2/docker?instanceId=${encodeURIComponent(instanceId)}`,
+        `/api/ec2/instances?id=${encodeURIComponent(instanceId)}`,
         { method: "DELETE" }
       );
       if (!response.ok) {
@@ -115,7 +116,7 @@ export function useTerminateDockerInstance() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ec2-docker-instances"] });
+      queryClient.invalidateQueries({ queryKey: ["ec2-instances"] });
       toast.success("Instance terminated successfully");
     },
     onError: (error: any) => {
@@ -131,7 +132,7 @@ export function useDockerExec() {
   const execute = async (containerId: string, command: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/ec2/docker/exec", {
+      const response = await fetch("/api/ec2/instances/exec", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ containerId, command }),
@@ -160,7 +161,7 @@ export function useDockerLogs() {
       tail?: number;
     }) => {
       const response = await fetch(
-        `/api/ec2/docker/logs?containerId=${containerId}&tail=${tail}`
+        `/api/ec2/instances/logs?containerId=${containerId}&tail=${tail}`
       );
       if (!response.ok) {
         const error = await response.json();
