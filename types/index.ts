@@ -810,10 +810,13 @@ export interface RDSDBInstance {
 // VPC Types
 export interface VPC {
   vpcId: string;
+  id?: string;
+  name?: string;
   cidrBlock: string;
   state: "pending" | "available";
   instanceTenancy?: "default" | "dedicated" | "host";
   isDefault?: boolean;
+  dockerNetworkName?: string;
   tags?: Record<string, string>;
 }
 

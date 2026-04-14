@@ -41,6 +41,7 @@ export function CreateRDSDialog() {
 
   const createRDS = useCreateRDSInstance();
   const { data: vpcs } = useVPCs();
+  const resolveVpcId = (vpc: { id?: string; vpcId: string }) => vpc.id || vpc.vpcId;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,8 +111,8 @@ export function CreateRDSDialog() {
                 </SelectTrigger>
                 <SelectContent>
                   {vpcs?.map((vpc) => (
-                    <SelectItem key={vpc.id} value={vpc.id}>
-                      {vpc.name} ({vpc.cidrBlock})
+                    <SelectItem key={resolveVpcId(vpc)} value={resolveVpcId(vpc)}>
+                      {vpc.name || resolveVpcId(vpc)} ({vpc.cidrBlock})
                     </SelectItem>
                   ))}
                 </SelectContent>

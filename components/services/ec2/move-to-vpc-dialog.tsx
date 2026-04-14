@@ -37,6 +37,7 @@ export function MoveToVPCDialog({
   const [selectedVpcId, setSelectedVpcId] = useState<string>("");
   const { data: vpcs } = useVPCs();
   const moveMutation = useMoveEC2ToVPC();
+  const resolveVpcId = (vpc: { id?: string; vpcId: string }) => vpc.id || vpc.vpcId;
 
   const handleMove = async () => {
     if (!selectedVpcId) return;
@@ -53,7 +54,8 @@ export function MoveToVPCDialog({
   };
 
   // Filter out current VPC from options
-  const availableVpcs = vpcs?.filter((vpc) => vpc.id !== currentVpcId) || [];
+  const availableVpcs =
+    vpcs?.filter((vpc) => resolveVpcId(vpc) !== currentVpcId) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,8 +81,8 @@ export function MoveToVPCDialog({
             </SelectTrigger>
             <SelectContent>
               {availableVpcs.map((vpc) => (
-                <SelectItem key={vpc.id} value={vpc.id}>
-                  {vpc.name || vpc.id} ({vpc.cidrBlock})
+                <SelectItem key={resolveVpcId(vpc)} value={resolveVpcId(vpc)}>
+                  {vpc.name || resolveVpcId(vpc)} ({vpc.cidrBlock})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -88,7 +90,9 @@ export function MoveToVPCDialog({
 
           {currentVpcId && (
             <p className="text-sm text-muted-foreground mt-2">
-              Current VPC: {vpcs?.find((v) => v.id === currentVpcId)?.name || currentVpcId}
+              Current VPC:{" "}
+              {vpcs?.find((v) => resolveVpcId(v) === currentVpcId)?.name ||
+                currentVpcId}
             </p>
           )}
         </div>

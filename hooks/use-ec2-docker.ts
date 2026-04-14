@@ -8,9 +8,15 @@ export interface DockerInstance {
   instanceType: string;
   state: string;
   image: string;
+  imageId?: string;
   name: string;
   status: string;
   publicIpAddress?: string;
+  privateIp?: string;
+  publicIp?: string;
+  vpcId?: string;
+  subnetId?: string;
+  availabilityZone?: string;
   launchTime?: string;
 }
 

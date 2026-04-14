@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StackList } from "@/components/services/cloudformation/stack-list";
+import { IaCWorkbench } from "@/components/services/cloudformation/iac-workbench";
 import { ServicePageLayout } from "@/components/layout/service-page-layout";
 import { Layers, CheckCircle, AlertCircle, Clock, Info } from "lucide-react";
 import { useStacks } from "@/hooks/use-cloudformation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CloudFormationPage() {
   const { data: stacks } = useStacks();
@@ -98,17 +100,30 @@ export default function CloudFormationPage() {
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Stacks</CardTitle>
-          <CardDescription>
-            Manage your CloudFormation stacks and their resources
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StackList />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="stacks" className="space-y-4">
+        <TabsList className="grid w-full max-w-lg grid-cols-2">
+          <TabsTrigger value="stacks">CloudFormation Stacks</TabsTrigger>
+          <TabsTrigger value="iac">IaC Workbench</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stacks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stacks</CardTitle>
+              <CardDescription>
+                Manage your CloudFormation stacks and their resources
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StackList />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="iac" className="space-y-4">
+          <IaCWorkbench />
+        </TabsContent>
+      </Tabs>
     </ServicePageLayout>
   );
 }

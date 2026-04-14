@@ -80,7 +80,7 @@ export async function DELETE(request: NextRequest) {
       StackName: stackName,
     });
 
-    await cloudformationClient.send(command);
+    await cloudFormationClient.send(command);
 
     return NextResponse.json({
       message: `Stack ${stackName} deletion initiated`,
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
       Capabilities: ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"],
     });
 
-    const response = await cloudformationClient.send(command);
+    const response = await cloudFormationClient.send(command);
 
     return NextResponse.json({
       stackId: response.StackId,
