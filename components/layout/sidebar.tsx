@@ -18,6 +18,7 @@ import {
   Zap,
   Home,
   LucideIcon,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -60,6 +61,20 @@ export function Sidebar({ className }: SidebarProps) {
             >
               <Home className="h-4 w-4" />
               <span>Overview</span>
+            </div>
+          </Link>
+
+          <Link href="/services/infrastructure">
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                pathname === "/services/infrastructure"
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <ActivityIcon className="h-4 w-4" />
+              <span>Infrastructure</span>
             </div>
           </Link>
 

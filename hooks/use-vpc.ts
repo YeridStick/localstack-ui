@@ -2,6 +2,133 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { VPC, Subnet, SecurityGroup } from "@/types";
 import { toast } from "sonner";
 
+// CloudFormation
+export interface CloudFormationStack {
+  StackName: string;
+  StackId: string;
+  StackStatus: string;
+  CreationTime: string;
+  TemplateDescription?: string;
+}
+
+export function useCloudFormationStacks() {
+  return useQuery({
+    queryKey: ["cloudformation", "stacks"],
+    queryFn: async () => {
+      const response = await fetch("/api/cloudformation");
+      if (!response.ok) throw new Error("Failed to fetch CloudFormation stacks");
+      return (await response.json()) as { stacks: CloudFormationStack[]; total: number };
+    },
+  });
+}
+
+export function useCreateCloudFormationStack() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({
+      stackName,
+      templateBody,
+      parameters,
+      tags,
+    }: {
+      stackName: string;
+      templateBody: string;
+      parameters?: { ParameterKey: string; ParameterValue: string }[];
+      tags?: { Key: string; Value: string }[];
+    }) => {
+      const response = await fetch("/api/cloudformation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stackName, templateBody, parameters, tags }),
+      });
+      if (!response.ok) throw new Error("Failed to create stack");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cloudformation", "stacks"] });
+      toast.success("CloudFormation stack created successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create stack");
+    },
+  });
+}
+
+export function useDeleteCloudFormationStack() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (stackName: string) => {
+      const response = await fetch(`/api/cloudformation?stackName=${stackName}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete stack");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cloudformation", "stacks"] });
+      toast.success("CloudFormation stack deletion initiated");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete stack");
+    },
+  });
+}
+
+// Infrastructure Diagram Data
+export interface InfrastructureNode {
+  id: string;
+  type: "vpc" | "ec2" | "rds" | "elb";
+  name: string;
+  state?: string;
+  status?: string;
+  instanceType?: string;
+  engine?: string;
+  scheme?: string;
+  privateIp?: string;
+  publicIp?: string;
+  endpoint?: string;
+  cidrBlock?: string;
+  vpcId?: string;
+  dnsName?: string;
+}
+
+export interface InfrastructureConnection {
+  from: string;
+  to: string;
+  fromType: string;
+  toType: string;
+  containerId?: string;
+  privateIp?: string;
+}
+
+export interface InfrastructureData {
+  vpcs: InfrastructureNode[];
+  ec2Instances: InfrastructureNode[];
+  rdsInstances: InfrastructureNode[];
+  loadBalancers: InfrastructureNode[];
+  connections: InfrastructureConnection[];
+  summary: {
+    totalVPCs: number;
+    totalEC2: number;
+    totalRDS: number;
+    totalELB: number;
+    totalConnections: number;
+  };
+}
+
+export function useInfrastructure() {
+  return useQuery({
+    queryKey: ["infrastructure"],
+    queryFn: async () => {
+      const response = await fetch("/api/infrastructure");
+      if (!response.ok) throw new Error("Failed to fetch infrastructure data");
+      return (await response.json()) as InfrastructureData;
+    },
+  });
+}
+
 // VPC Resources (EC2 and RDS attached to VPC)
 export interface VPCResource {
   id: string;
