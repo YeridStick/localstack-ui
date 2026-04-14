@@ -9,8 +9,8 @@ import {
   MemoryStick, 
   HardDrive, 
   Activity,
-  TrendingUp,
-  Server
+  Server,
+  Database
 } from "lucide-react";
 import { spawn } from "child_process";
 
@@ -280,7 +280,6 @@ function ContainerMetricRow({ metric }: ContainerMetricRowProps) {
 // Helper function for Docker commands
 const execDocker = (args: string[]): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const { spawn } = require("child_process");
     const proc = spawn("docker", args);
     let stdout = "";
     let stderr = "";
@@ -292,5 +291,3 @@ const execDocker = (args: string[]): Promise<string> => {
     });
   });
 };
-
-import { Database } from "lucide-react";

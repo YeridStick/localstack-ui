@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { LocalStackHealth, Service } from "@/types";
 import { AVAILABLE_SERVICES } from "@/config/services";
+import { checkAwsEmulatorHealth } from "@/lib/aws/emulator-health";
+import { getAwsRuntimeConfig } from "@/lib/aws/runtime-config";
 import {
   s3Client,
   dynamoClient,
@@ -91,8 +93,25 @@ async function checkServiceHealth(service: Service): Promise<Service> {
 }
 
 export async function GET() {
-  const endpoint =
-    process.env.NEXT_PUBLIC_LOCALSTACK_ENDPOINT || "http://localhost:4566";
+  const runtime = getAwsRuntimeConfig();
+  const emulatorHealth = await checkAwsEmulatorHealth();
+  const endpoint = runtime.publicEndpoint;
+
+  if (!emulatorHealth.isReachable) {
+    const health: LocalStackHealth = {
+      status: "unhealthy",
+      endpoint,
+      backend: emulatorHealth.backend,
+      healthPath: emulatorHealth.healthPath || undefined,
+      lastChecked: new Date(),
+      services: AVAILABLE_SERVICES.map((service) => ({
+        ...service,
+        status: service.enabled ? "error" : "stopped",
+      })),
+    };
+
+    return NextResponse.json(health, { status: 503 });
+  }
 
   try {
     const servicePromises = AVAILABLE_SERVICES.map((service) =>
@@ -101,10 +120,13 @@ export async function GET() {
     const services = await Promise.all(servicePromises);
 
     const hasRunningServices = services.some((s) => s.status === "running");
+    const overallHealthy = emulatorHealth.isReachable && hasRunningServices;
 
     const health: LocalStackHealth = {
-      status: hasRunningServices ? "healthy" : "unhealthy",
+      status: overallHealthy ? "healthy" : "unhealthy",
       endpoint,
+      backend: emulatorHealth.backend,
+      healthPath: emulatorHealth.healthPath || undefined,
       lastChecked: new Date(),
       services,
     };
@@ -116,6 +138,8 @@ export async function GET() {
       {
         status: "unhealthy",
         endpoint,
+        backend: emulatorHealth.backend,
+        healthPath: emulatorHealth.healthPath || undefined,
         lastChecked: new Date(),
         services: AVAILABLE_SERVICES.map((s) => ({ ...s, status: "error" })),
       },

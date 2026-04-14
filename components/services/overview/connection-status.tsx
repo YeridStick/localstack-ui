@@ -20,7 +20,7 @@ export function ConnectionStatus() {
       <Card>
         <CardHeader>
           <CardTitle>Connection Status</CardTitle>
-          <CardDescription>Checking LocalStack connection...</CardDescription>
+          <CardDescription>Checking emulator connection...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -37,13 +37,13 @@ export function ConnectionStatus() {
       <Card>
         <CardHeader>
           <CardTitle>Connection Status</CardTitle>
-          <CardDescription>Unable to connect to LocalStack</CardDescription>
+          <CardDescription>Unable to connect to emulator</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5 text-destructive" />
             <span className="text-sm text-muted-foreground">
-              Failed to connect to LocalStack
+              Failed to connect to AWS emulator
             </span>
           </div>
         </CardContent>
@@ -67,7 +67,7 @@ export function ConnectionStatus() {
     <Card>
       <CardHeader>
         <CardTitle>Connection Status</CardTitle>
-        <CardDescription>LocalStack endpoint and health</CardDescription>
+        <CardDescription>AWS emulator endpoint and health</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
@@ -83,6 +83,12 @@ export function ConnectionStatus() {
           <span className="text-sm font-medium">Endpoint</span>
           <span className="text-sm text-muted-foreground">
             {health?.endpoint || "N/A"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Backend</span>
+          <span className="text-sm text-muted-foreground capitalize">
+            {health?.backend || "unknown"}
           </span>
         </div>
         <div className="flex items-center justify-between">

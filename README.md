@@ -1,220 +1,151 @@
-# LocalStack UI
+# localstack-ui
 
-A modern web-based interface for managing and monitoring LocalStack AWS services during local development.
+Local AWS console for MiniStack/LocalStack.
 
-## Features
+Goal: run fast, learn fast, and practice AWS flows locally with a UI close to the AWS Console.
 
-- 🚀 **Real-time Service Monitoring** - View the status of your LocalStack services
-- 📦 **S3 Management** - Create, browse, and manage S3 buckets and objects
-- 🔐 **Secrets Manager** - Manage secrets with full CRUD operations
-- ⚡ **Lambda Functions** - View and monitor Lambda functions
-- 🎨 **Modern UI** - Built with Next.js 14 and shadcn/ui components
-- 🔄 **Auto-refresh** - Real-time updates using TanStack Query
-- 🌐 **No CORS Issues** - Server-side API routes handle all AWS SDK calls
+## How it works
 
-## Prerequisites
+There are three layers:
 
-- Node.js 18+ and npm
-- LocalStack running locally (default: http://localhost:4566)
-- Docker (for running LocalStack)
+1. Docker runs containers.
+2. MiniStack/LocalStack exposes AWS-compatible endpoints.
+3. This Next.js app uses AWS SDK against those endpoints.
 
-## Quick Start
+Your app talks to the emulator endpoint (not to Docker directly for resource operations).
 
-1. **Clone the repository**
+## Quick start (recommended)
 
-   ```bash
-   git clone <repository-url>
-   cd localstack-ui
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Adjust the values in `.env.local` if your LocalStack instance runs on a different endpoint.
-
-4. **Start LocalStack** (if not already running)
-
-   ```bash
-   docker run -d -p 4566:4566 -p 4571:4571 localstack/localstack
-   ```
-
-5. **Run the development server**
-
-   ```bash
-   npm run dev
-   ```
-
-6. **Open the application**
-
-   Navigate to [http://localhost:4563](http://localhost:4563)
-
-## Available Scripts
+Use Docker Compose to run both emulator and UI:
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run typecheck    # Check TypeScript types
-npm run format       # Format code with Prettier
+git clone <repository-url>
+cd localstack-ui
+docker compose up --build
 ```
 
-## Supported Services
+Open:
 
-| Service         | Status       | Features                                                           |
-| --------------- | ------------ | ------------------------------------------------------------------ |
-| S3              | ✅ Complete  | Create/delete buckets, upload/download objects, manage permissions |
-| Secrets Manager | ✅ Complete  | Create/update/delete secrets, view secret values                   |
-| Lambda          | ✅ Read-only | List functions, view configurations                                |
-| DynamoDB        | ⏳ Planned   | -                                                                  |
-| SQS             | ⏳ Planned   | -                                                                  |
-| SNS             | ⏳ Planned   | -                                                                  |
-| CloudFormation  | ⏳ Planned   | -                                                                  |
-| CloudWatch      | ⏳ Planned   | -                                                                  |
+- UI: http://localhost:4563
+- Emulator endpoint: http://localhost:4566
 
-## Architecture
-
-```
-localstack-ui/
-├── app/                    # Next.js App Router
-│   ├── api/               # Server-side API routes
-│   └── services/          # Service pages
-├── components/            # React components
-│   ├── layout/           # Layout components
-│   ├── services/         # Service-specific components
-│   └── ui/               # shadcn/ui components
-├── hooks/                # Custom React hooks
-├── lib/                  # Utilities and configurations
-├── types/                # TypeScript definitions
-└── config/              # App configuration
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable                          | Description                                | Default                 |
-| --------------------------------- | ------------------------------------------ | ----------------------- |
-| `NEXT_PUBLIC_LOCALSTACK_ENDPOINT` | LocalStack endpoint URL                    | `http://localhost:4566` |
-| `NEXT_PUBLIC_AWS_REGION`          | AWS region for LocalStack                  | `us-east-1`             |
-| `AWS_ACCESS_KEY_ID`               | AWS access key (use 'test' for LocalStack) | `test`                  |
-| `AWS_SECRET_ACCESS_KEY`           | AWS secret key (use 'test' for LocalStack) | `test`                  |
-
-### LocalStack Configuration
-
-Ensure your LocalStack instance has the required services enabled. For a basic setup:
+Stop:
 
 ```bash
-docker run -d \
-  -p 4566:4566 \
-  -e SERVICES=s3,lambda,secretsmanager,dynamodb,sqs,sns,cloudformation,cloudwatch \
-  localstack/localstack
+docker compose down
 ```
 
-## Development
+## Quick start (manual)
 
-### Adding a New Service
+1. Run MiniStack:
 
-See [CLAUDE.md](./CLAUDE.md) for detailed instructions on adding support for new LocalStack services.
+```bash
+docker run -d --name ministack -p 4566:4566 ministackorg/ministack
+```
 
-### Tech Stack
+2. Install and run UI:
 
-- **Framework**: [Next.js 14+](https://nextjs.org/) with App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **State Management**: [TanStack Query v5](https://tanstack.com/query)
-- **AWS SDK**: [AWS SDK v3](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/)
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-### Best Practices
+3. Open http://localhost:4563
 
-1. **Use API Routes**: All AWS SDK calls should go through Next.js API routes to avoid CORS issues
-2. **Type Safety**: Define TypeScript types for all data structures
-3. **Error Handling**: Implement proper error handling with user-friendly messages
-4. **Loading States**: Show loading indicators for all async operations
-5. **Accessibility**: Ensure all interactive elements are keyboard accessible
+## Environment variables
+
+Create `.env.local` from `.env.example`.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `AWS_ENDPOINT_URL` | Server-side AWS SDK endpoint used by API routes | `http://localhost:4566` |
+| `NEXT_PUBLIC_LOCALSTACK_ENDPOINT` | Endpoint shown in UI and used by client-side references | `http://localhost:4566` |
+| `AWS_REGION` | Server-side region | `us-east-1` |
+| `NEXT_PUBLIC_AWS_REGION` | Region for UI/client context | `us-east-1` |
+| `AWS_ACCESS_KEY_ID` | AWS key for emulator | `test` |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret for emulator | `test` |
+| `NEXT_PUBLIC_REFRESH_INTERVAL` | Health polling interval (ms) | `5000` |
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run typecheck
+npm run lint
+
+npm run compose:up
+npm run compose:down
+npm run compose:logs
+```
+
+## Health and connectivity
+
+- App health route: `GET /api/health`
+- Emulator checks tried by the app:
+  - `/_ministack/health`
+  - `/_localstack/health`
+
+UI now reports backend type (`ministack` or `localstack`) and endpoint status.
+
+## Terraform and CloudFormation workbench
+
+CloudFormation page includes an IaC Workbench with:
+
+- Terraform native mode
+- CloudFormation bridge mode (Terraform creates `aws_cloudformation_stack`)
+- Actions: `validate`, `plan`, `apply`, `destroy`
+
+Requirements:
+
+- MiniStack/LocalStack running
+- Terraform CLI installed on the machine where Next.js runs
+- Docker running (for EC2 container simulation flows)
+
+## Project structure
+
+Current structure is monolithic by design, but modular:
+
+- `app/` pages and routes
+- `app/api/` server handlers
+- `lib/aws/` runtime config and emulator adapters
+- `components/services/` UI by AWS service
+- `components/layout/` shell and layout
+- `hooks/` React Query hooks
+- `types/` shared contracts
 
 ## Troubleshooting
 
-### LocalStack Connection Issues
+Check containers:
 
-If you can't connect to LocalStack:
+```bash
+docker ps
+docker compose logs -f
+```
 
-1. Verify LocalStack is running:
+Check emulator health:
 
-   ```bash
-   curl http://localhost:4566/_localstack/health
-   ```
+```bash
+curl http://localhost:4566/_ministack/health
+```
 
-2. Check Docker containers:
+Check app health proxy:
 
-   ```bash
-   docker ps
-   ```
+```bash
+curl http://localhost:4563/api/health
+```
 
-3. View LocalStack logs:
-   ```bash
-   docker logs <localstack-container-id>
-   ```
+If Terraform Workbench shows unavailable:
 
-### CORS Errors
+```bash
+terraform version
+```
 
-If you encounter CORS errors, ensure you're:
+If needed, restart stack:
 
-- Using the Next.js API routes (`/api/*`) instead of direct client-side AWS SDK calls
-- LocalStack endpoint is correctly configured in your environment variables
-
-### Build Errors
-
-1. Clear Next.js cache:
-
-   ```bash
-   rm -rf .next
-   ```
-
-2. Reinstall dependencies:
-
-   ```bash
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
-
-3. Check TypeScript errors:
-   ```bash
-   npm run typecheck
-   ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Pre-commit Checklist
-
-- [ ] Run `npm run lint` and fix any issues
-- [ ] Run `npm run typecheck` and fix any type errors
-- [ ] Run `npm run build` to ensure the project builds
-- [ ] Test your changes with LocalStack running
-- [ ] Update documentation if needed
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [LocalStack](https://localstack.cloud/) for providing local AWS services
-- [shadcn/ui](https://ui.shadcn.com/) for the beautiful UI components
-- [Next.js](https://nextjs.org/) for the amazing React framework
+```bash
+docker compose down
+docker compose up --build
+```

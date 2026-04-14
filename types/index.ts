@@ -13,6 +13,8 @@ export interface LocalStackHealth {
   status: "healthy" | "unhealthy" | "unknown";
   endpoint: string;
   version?: string;
+  backend?: "ministack" | "localstack" | "unknown";
+  healthPath?: string;
   lastChecked: Date;
   services: Service[];
 }

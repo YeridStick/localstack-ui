@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { getAwsRuntimeConfig } from "@/lib/aws/runtime-config";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +34,11 @@ const WORKSPACES_ROOT = path.join(
   "terraform-workspaces",
 );
 
-const localStackEndpoint =
-  process.env.NEXT_PUBLIC_LOCALSTACK_ENDPOINT ||
-  process.env.LOCALSTACK_ENDPOINT ||
-  "http://localhost:4566";
-
-const awsRegion = process.env.NEXT_PUBLIC_AWS_REGION || "us-east-1";
-const awsAccessKey = process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || "test";
-const awsSecretKey = process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || "test";
+const runtime = getAwsRuntimeConfig();
+const localStackEndpoint = runtime.endpoint;
+const awsRegion = runtime.region;
+const awsAccessKey = runtime.credentials.accessKeyId;
+const awsSecretKey = runtime.credentials.secretAccessKey;
 
 function sanitizeWorkspaceName(input?: string): string {
   const sanitized = (input || "default")

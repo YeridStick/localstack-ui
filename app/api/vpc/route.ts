@@ -69,7 +69,11 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const vpcId = response.Vpc?.VpcId!;
+    const createdVpc = response.Vpc;
+    const vpcId = createdVpc?.VpcId;
+    if (!createdVpc || !vpcId) {
+      throw new Error("VPC creation returned an invalid response");
+    }
     const networkName = `vpc-${vpcId}`;
 
     // 2. Create Docker network for this VPC
@@ -90,9 +94,9 @@ export async function POST(request: NextRequest) {
 
     const vpc = {
       id: vpcId,
-      cidrBlock: response.Vpc?.CidrBlock!,
+      cidrBlock: createdVpc.CidrBlock || cidrBlock || "10.0.0.0/16",
       name: name || vpcId,
-      state: response.Vpc?.State as "available" | "pending",
+      state: createdVpc.State as "available" | "pending",
       isDefault: false,
       tags: { ...tags, ...(name && { Name: name }) },
       dockerNetworkName: networkName,

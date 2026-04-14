@@ -1,0 +1,24 @@
+services:
+  ministack:
+    image: ministackorg/ministack:latest
+    ports:
+      - "4566:4566"
+    restart: unless-stopped
+
+  localstack-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - ministack
+    environment:
+      AWS_ENDPOINT_URL: http://ministack:4566
+      NEXT_PUBLIC_LOCALSTACK_ENDPOINT: http://localhost:4566
+      AWS_REGION: us-east-1
+      NEXT_PUBLIC_AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      NEXT_PUBLIC_REFRESH_INTERVAL: 5000
+    ports:
+      - "4563:4563"
+    restart: unless-stopped

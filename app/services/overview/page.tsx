@@ -19,7 +19,7 @@ export default function OverviewPage() {
         <div>
           <h1 className="text-3xl font-bold">Overview</h1>
           <p className="text-muted-foreground">
-            Monitor and manage your LocalStack services
+            Monitor and manage your AWS emulator services
           </p>
         </div>
         <Button

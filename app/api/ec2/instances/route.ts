@@ -8,7 +8,6 @@ import {
   TerminateInstancesCommand,
 } from "@aws-sdk/client-ec2";
 import { spawn } from "child_process";
-import { promisify } from "util";
 
 // Helper to execute docker commands
 const execDocker = (args: string[]): Promise<string> => {
@@ -117,7 +116,10 @@ export async function POST(request: Request) {
     });
 
     const awsResponse = await ec2Client.send(awsCommand);
-    const instanceId = awsResponse.Instances?.[0]?.InstanceId!;
+    const instanceId = awsResponse.Instances?.[0]?.InstanceId;
+    if (!instanceId) {
+      throw new Error("EC2 instance ID was not returned by the emulator");
+    }
 
     // 2. Get VPC network name if vpcId provided
     let networkName = "bridge";

@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start -p 4563",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "compose:up": "docker compose up --build",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f"
   },
   "dependencies": {
     "@aws-sdk/client-api-gateway": "^3.856.0",

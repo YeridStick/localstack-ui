@@ -18,7 +18,14 @@ import {
   Zap,
   Home,
   LucideIcon,
-  Activity as ActivityIcon,
+  Server,
+  Database,
+  Network,
+  Scale,
+  Container,
+  Users,
+  Folder,
+  Boxes,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -34,29 +41,75 @@ const iconMap: Record<string, LucideIcon> = {
   Globe,
   Shield,
   Zap,
+  Server,
+  Database,
+  Network,
+  Scale,
+  Container,
+  Users,
+  Folder,
 };
+
+const SERVICE_GROUPS: Array<{
+  label: string;
+  ids: string[];
+}> = [
+  {
+    label: "Compute",
+    ids: ["ec2", "lambda", "ecs", "elbv2"],
+  },
+  {
+    label: "Storage",
+    ids: ["s3", "efs", "rds", "elasticache", "dynamodb"],
+  },
+  {
+    label: "Networking",
+    ids: ["vpc", "apigateway", "route53"],
+  },
+  {
+    label: "Integration",
+    ids: ["sqs", "eventbridge", "scheduler"],
+  },
+  {
+    label: "Security & IaC",
+    ids: ["iam", "secretsmanager", "cloudformation", "cloudwatch", "logs"],
+  },
+];
 
 interface SidebarProps {
   className?: string;
+}
+
+function serviceById(id: string) {
+  return AVAILABLE_SERVICES.find((service) => service.id === id);
 }
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className={cn("w-64 border-r", className)}>
+    <aside className={cn("w-72 border-r bg-slate-950 text-slate-100", className)}>
       <ScrollArea className="h-full">
-        <div className="flex h-16 items-center border-b px-6">
-          <h2 className="text-lg font-semibold">LocalStack</h2>
+        <div className="flex h-16 items-center border-b border-slate-800 px-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-md bg-orange-500/20 p-1.5">
+              <Boxes className="h-4 w-4 text-orange-300" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold leading-none">AWS Local Console</h2>
+              <p className="mt-1 text-[11px] text-slate-400">MiniStack / LocalStack</p>
+            </div>
+          </div>
         </div>
-        <div className="space-y-1 p-3">
+
+        <div className="space-y-3 p-3">
           <Link href="/">
             <div
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 pathname === "/"
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                  ? "bg-orange-500/20 text-orange-200"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
               )}
             >
               <Home className="h-4 w-4" />
@@ -69,20 +122,28 @@ export function Sidebar({ className }: SidebarProps) {
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 pathname === "/services/infrastructure"
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                  ? "bg-orange-500/20 text-orange-200"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
               )}
             >
-              <ActivityIcon className="h-4 w-4" />
+              <Activity className="h-4 w-4" />
               <span>Infrastructure</span>
             </div>
           </Link>
 
-          <div className="my-3 h-px bg-border" />
+          <div className="h-px bg-slate-800" />
 
-          <div className="space-y-1">
-            {AVAILABLE_SERVICES.filter((service) => service.enabled).map(
-              (service) => {
+          {SERVICE_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1.5">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {group.label}
+              </p>
+              {group.ids.map((serviceId) => {
+                const service = serviceById(serviceId);
+                if (!service || !service.enabled) {
+                  return null;
+                }
+
                 const Icon = iconMap[service.icon] || Package;
                 const href = service.href || `/services/${service.id}`;
                 const isActive = pathname === href;
@@ -93,8 +154,8 @@ export function Sidebar({ className }: SidebarProps) {
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                          ? "bg-orange-500/20 text-orange-200"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -102,37 +163,9 @@ export function Sidebar({ className }: SidebarProps) {
                     </div>
                   </Link>
                 );
-              },
-            )}
-          </div>
-
-          {AVAILABLE_SERVICES.some((service) => !service.enabled) && (
-            <>
-              <div className="my-3 h-px bg-border" />
-              <div className="px-3 py-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Coming Soon
-                </p>
-              </div>
-              <div className="space-y-1">
-                {AVAILABLE_SERVICES.filter((service) => !service.enabled).map(
-                  (service) => {
-                    const Icon = iconMap[service.icon] || Package;
-
-                    return (
-                      <div
-                        key={service.id}
-                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground/50"
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{service.displayName}</span>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            </>
-          )}
+              })}
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </aside>

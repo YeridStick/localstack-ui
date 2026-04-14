@@ -19,15 +19,14 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { Route53Client } from "@aws-sdk/client-route-53";
 import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
 import { EFSClient } from "@aws-sdk/client-efs";
+import { getAwsRuntimeConfig } from "@/lib/aws/runtime-config";
+
+const runtime = getAwsRuntimeConfig();
 
 const config = {
-  endpoint:
-    process.env.NEXT_PUBLIC_LOCALSTACK_ENDPOINT || "http://localhost:4566",
-  region: process.env.NEXT_PUBLIC_AWS_REGION || "ap-south-1",
-  credentials: {
-    accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || "test",
-    secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || "test",
-  },
+  endpoint: runtime.endpoint,
+  region: runtime.region,
+  credentials: runtime.credentials,
   forcePathStyle: true, // Required for S3
 };
 
