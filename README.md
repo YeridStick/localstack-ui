@@ -66,6 +66,43 @@ Create `.env.local` from `.env.example`.
 | `AWS_ACCESS_KEY_ID` | AWS key for emulator | `test` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret for emulator | `test` |
 | `NEXT_PUBLIC_REFRESH_INTERVAL` | Health polling interval (ms) | `5000` |
+| `OLLAMA_BASE_URL` | Server-side Ollama endpoint used by Study Lab API | `http://127.0.0.1:11434` |
+| `OLLAMA_MODEL` | Model name used for tutor and quiz generation | `gemma4:e4b` |
+| `NEXT_PUBLIC_OLLAMA_MODEL` | Model label shown in Study Lab UI | `gemma4:e4b` |
+| `OLLAMA_API_MODE` | Ollama endpoint strategy: `auto`, `chat`, or `generate` | `auto` |
+
+## Study Lab (Gemma + Ollama)
+
+The app includes a **Study Lab** section (`/services/study`) with:
+
+- Guided Q&A dialog for certification prep
+- Quiz generation with automatic answer checking
+- Topic/difficulty focus for practical learning
+- Fast/balanced/deep generation profiles
+- Local glossary + anti-repeat question memory
+
+Run Ollama locally and pull the model:
+
+```bash
+ollama run gemma4:e4b
+```
+
+Quick PowerShell test (generate API):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:11434/api/generate" -Body (ConvertTo-Json @{model="gemma4:e4b"; prompt="Como crear un bucket S3 en Terraform?"; stream=$false}) -ContentType "application/json" | Select-Object -ExpandProperty response
+```
+
+If UI runs in Docker Compose, `OLLAMA_BASE_URL` is set to `http://host.docker.internal:11434`.
+
+### Quiz payload parameters
+
+`POST /api/study/chat` for `mode="quiz"` also supports:
+
+- `generationStrategy`: `bank` | `hybrid` | `model`
+- `latencyProfile`: `fast` | `balanced` | `deep`
+- `avoidRecent`: `true` | `false`
+- `recentQuestionKeys`: `string[]` (keys returned by previous quiz responses)
 
 ## Scripts
 

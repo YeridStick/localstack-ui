@@ -23,6 +23,24 @@ interface TableViewerProps {
   onBack: () => void;
 }
 
+function getAttrName(
+  entry: { attributeName?: string; AttributeName?: string } | undefined,
+): string {
+  return entry?.attributeName || entry?.AttributeName || "";
+}
+
+function getKeyType(
+  entry: { keyType?: string; KeyType?: string } | undefined,
+): string {
+  return entry?.keyType || entry?.KeyType || "";
+}
+
+function getIndexName(
+  index: { indexName?: string; IndexName?: string } | undefined,
+): string {
+  return index?.indexName || index?.IndexName || "";
+}
+
 export function TableViewer({ tableName, onBack }: TableViewerProps) {
   const [activeTab, setActiveTab] = useState("items");
   const { data: table, isLoading, error } = useDynamoDBTable(tableName);
@@ -137,7 +155,7 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {table.billingMode === "PAY_PER_REQUEST"
+                  {(table.billingMode || table.BillingModeSummary?.BillingMode) === "PAY_PER_REQUEST"
                     ? "On-Demand"
                     : "Provisioned"}
                 </div>
@@ -155,30 +173,52 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
             <CardContent>
               <div className="space-y-2">
                 {table.keySchema?.map(
-                  (key: { attributeName: string; keyType: string }) => (
+                  (
+                    key: {
+                      attributeName?: string;
+                      AttributeName?: string;
+                      keyType?: string;
+                      KeyType?: string;
+                    },
+                    keyIndex: number,
+                  ) => {
+                    const attributeName = getAttrName(key);
+                    const keyType = getKeyType(key);
+                    return (
                     <div
-                      key={key.attributeName}
+                      key={`${attributeName || "primary"}-${keyType || "unknown"}-${keyIndex}`}
                       className="flex items-center gap-2"
                     >
-                      {key.keyType === "HASH" ? (
+                      {keyType === "HASH" ? (
                         <Hash className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <SortAsc className="h-4 w-4 text-muted-foreground" />
                       )}
-                      <span className="font-medium">{key.attributeName}</span>
+                      <span className="font-medium">{attributeName || "-"}</span>
                       <Badge variant="outline">
-                        {key.keyType === "HASH" ? "Partition Key" : "Sort Key"}
+                        {keyType === "HASH" ? "Partition Key" : "Sort Key"}
                       </Badge>
                       <Badge variant="secondary">
                         {table.attributeDefinitions?.find(
                           (attr: {
-                            attributeName: string;
-                            attributeType: string;
-                          }) => attr.attributeName === key.attributeName,
-                        )?.attributeType || "Unknown"}
+                            attributeName?: string;
+                            AttributeName?: string;
+                            attributeType?: string;
+                            AttributeType?: string;
+                          }) => getAttrName(attr) === attributeName,
+                        )?.attributeType ||
+                          table.attributeDefinitions?.find(
+                            (attr: {
+                              attributeName?: string;
+                              AttributeName?: string;
+                              attributeType?: string;
+                              AttributeType?: string;
+                            }) => getAttrName(attr) === attributeName,
+                          )?.AttributeType ||
+                          "Unknown"}
                       </Badge>
                     </div>
-                  ),
+                  )},
                 )}
               </div>
             </CardContent>
@@ -200,7 +240,10 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
                         Read Capacity
                       </p>
                       <p className="text-2xl font-bold">
-                        {table.provisionedThroughput.readCapacityUnits} RCU
+                        {table.provisionedThroughput.readCapacityUnits ??
+                          table.provisionedThroughput.ReadCapacityUnits ??
+                          0}{" "}
+                        RCU
                       </p>
                     </div>
                     <div>
@@ -208,7 +251,10 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
                         Write Capacity
                       </p>
                       <p className="text-2xl font-bold">
-                        {table.provisionedThroughput.writeCapacityUnits} WCU
+                        {table.provisionedThroughput.writeCapacityUnits ??
+                          table.provisionedThroughput.WriteCapacityUnits ??
+                          0}{" "}
+                        WCU
                       </p>
                     </div>
                   </div>
@@ -224,12 +270,14 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
               <h3 className="text-lg font-semibold">
                 Global Secondary Indexes
               </h3>
-              {table.globalSecondaryIndexes.map((gsi: any) => (
-                <Card key={gsi.indexName}>
+              {table.globalSecondaryIndexes.map((gsi: any, gsiIndex: number) => (
+                <Card key={getIndexName(gsi) || `gsi-${gsiIndex}`}>
                   <CardHeader>
-                    <CardTitle className="text-base">{gsi.indexName}</CardTitle>
+                    <CardTitle className="text-base">
+                      {getIndexName(gsi) || `GSI ${gsiIndex + 1}`}
+                    </CardTitle>
                     <CardDescription>
-                      Status: {getStatusBadge(gsi.indexStatus || "ACTIVE")}
+                      Status: {getStatusBadge(gsi.indexStatus || gsi.IndexStatus || "ACTIVE")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -237,31 +285,42 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
                       <div>
                         <p className="text-sm font-medium">Key Schema</p>
                         {gsi.keySchema?.map(
-                          (key: { attributeName: string; keyType: string }) => (
+                          (
+                            key: {
+                              attributeName?: string;
+                              AttributeName?: string;
+                              keyType?: string;
+                              KeyType?: string;
+                            },
+                            keyIndex: number,
+                          ) => {
+                            const attributeName = getAttrName(key);
+                            const keyType = getKeyType(key);
+                            return (
                             <div
-                              key={key.attributeName}
+                              key={`${attributeName || "gsi-key"}-${keyType || "unknown"}-${keyIndex}`}
                               className="flex items-center gap-2 mt-1"
                             >
-                              {key.keyType === "HASH" ? (
+                              {keyType === "HASH" ? (
                                 <Hash className="h-3 w-3 text-muted-foreground" />
                               ) : (
                                 <SortAsc className="h-3 w-3 text-muted-foreground" />
                               )}
                               <span className="text-sm">
-                                {key.attributeName}
+                                {attributeName || "-"}
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {key.keyType === "HASH" ? "Partition" : "Sort"}
+                                {keyType === "HASH" ? "Partition" : "Sort"}
                               </Badge>
                             </div>
-                          ),
+                          )},
                         )}
                       </div>
                       {gsi.projection && (
                         <div>
                           <p className="text-sm font-medium">Projection</p>
                           <p className="text-sm text-muted-foreground">
-                            {gsi.projection.projectionType}
+                            {gsi.projection.projectionType || gsi.projection.ProjectionType}
                           </p>
                         </div>
                       )}
@@ -285,11 +344,11 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
                 <h3 className="text-lg font-semibold mt-6">
                   Local Secondary Indexes
                 </h3>
-                {table.localSecondaryIndexes.map((lsi: any) => (
-                  <Card key={lsi.indexName}>
+                {table.localSecondaryIndexes.map((lsi: any, lsiIndex: number) => (
+                  <Card key={getIndexName(lsi) || `lsi-${lsiIndex}`}>
                     <CardHeader>
                       <CardTitle className="text-base">
-                        {lsi.indexName}
+                        {getIndexName(lsi) || `LSI ${lsiIndex + 1}`}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -298,28 +357,33 @@ export function TableViewer({ tableName, onBack }: TableViewerProps) {
                           <p className="text-sm font-medium">Key Schema</p>
                           {lsi.keySchema?.map(
                             (key: {
-                              attributeName: string;
-                              keyType: string;
-                            }) => (
+                              attributeName?: string;
+                              AttributeName?: string;
+                              keyType?: string;
+                              KeyType?: string;
+                            }, keyIndex: number) => {
+                              const attributeName = getAttrName(key);
+                              const keyType = getKeyType(key);
+                              return (
                               <div
-                                key={key.attributeName}
+                                key={`${attributeName || "lsi-key"}-${keyType || "unknown"}-${keyIndex}`}
                                 className="flex items-center gap-2 mt-1"
                               >
-                                {key.keyType === "HASH" ? (
+                                {keyType === "HASH" ? (
                                   <Hash className="h-3 w-3 text-muted-foreground" />
                                 ) : (
                                   <SortAsc className="h-3 w-3 text-muted-foreground" />
                                 )}
                                 <span className="text-sm">
-                                  {key.attributeName}
+                                  {attributeName || "-"}
                                 </span>
                                 <Badge variant="outline" className="text-xs">
-                                  {key.keyType === "HASH"
+                                  {keyType === "HASH"
                                     ? "Partition"
                                     : "Sort"}
                                 </Badge>
                               </div>
-                            ),
+                            )},
                           )}
                         </div>
                       </div>

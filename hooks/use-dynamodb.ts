@@ -2,6 +2,60 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DynamoDBTable } from "@/types";
 import { toast } from "sonner";
 
+export type DynamoScalarType = "S" | "N" | "B";
+export type DynamoProjectionType = "ALL" | "KEYS_ONLY" | "INCLUDE";
+
+export interface CreateTableAttributeDefinition {
+  attributeName: string;
+  attributeType: DynamoScalarType;
+}
+
+export interface CreateTableKeySchemaElement {
+  attributeName: string;
+  keyType: "HASH" | "RANGE";
+}
+
+export interface CreateTableProjection {
+  projectionType: DynamoProjectionType;
+  nonKeyAttributes?: string[];
+}
+
+export interface CreateTableGlobalSecondaryIndex {
+  indexName: string;
+  keySchema: CreateTableKeySchemaElement[];
+  projection: CreateTableProjection;
+  provisionedThroughput?: {
+    readCapacityUnits: number;
+    writeCapacityUnits: number;
+  };
+}
+
+export interface CreateTableLocalSecondaryIndex {
+  indexName: string;
+  keySchema: CreateTableKeySchemaElement[];
+  projection: CreateTableProjection;
+}
+
+export interface CreateDynamoDBTableRequest {
+  tableName: string;
+  attributeDefinitions: CreateTableAttributeDefinition[];
+  keySchema: CreateTableKeySchemaElement[];
+  billingMode?: "PAY_PER_REQUEST" | "PROVISIONED";
+  provisionedThroughput?: {
+    readCapacityUnits: number;
+    writeCapacityUnits: number;
+  };
+  globalSecondaryIndexes?: CreateTableGlobalSecondaryIndex[];
+  localSecondaryIndexes?: CreateTableLocalSecondaryIndex[];
+  streamSpecification?: {
+    streamEnabled: boolean;
+    streamViewType?: "NEW_IMAGE" | "OLD_IMAGE" | "NEW_AND_OLD_IMAGES" | "KEYS_ONLY";
+  };
+  tableClass?: "STANDARD" | "STANDARD_INFREQUENT_ACCESS";
+  deletionProtectionEnabled?: boolean;
+  tags?: Array<{ key: string; value: string }>;
+}
+
 // List all tables
 export function useDynamoDBTables() {
   return useQuery({
@@ -43,24 +97,7 @@ export function useCreateTable() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (tableConfig: {
-      tableName: string;
-      attributeDefinitions: Array<{
-        attributeName: string;
-        attributeType: "S" | "N" | "B";
-      }>;
-      keySchema: Array<{
-        attributeName: string;
-        keyType: "HASH" | "RANGE";
-      }>;
-      billingMode?: "PAY_PER_REQUEST" | "PROVISIONED";
-      provisionedThroughput?: {
-        readCapacityUnits: number;
-        writeCapacityUnits: number;
-      };
-      globalSecondaryIndexes?: any[];
-      localSecondaryIndexes?: any[];
-    }) => {
+    mutationFn: async (tableConfig: CreateDynamoDBTableRequest) => {
       const response = await fetch("/api/dynamodb/tables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

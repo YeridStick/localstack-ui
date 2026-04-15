@@ -12,7 +12,6 @@ import {
   Server,
   Database
 } from "lucide-react";
-import { spawn } from "child_process";
 
 // Resource metrics interface
 interface ContainerMetrics {
@@ -27,10 +26,17 @@ interface ContainerMetrics {
   pids: number;
 }
 
+interface SystemStats {
+  totalContainers: number;
+  runningContainers: number;
+  totalNetworks: number;
+  totalVolumes: number;
+}
+
 export function ResourceMetrics() {
   const [metrics, setMetrics] = useState<ContainerMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [systemStats, setSystemStats] = useState({
+  const [systemStats, setSystemStats] = useState<SystemStats>({
     totalContainers: 0,
     runningContainers: 0,
     totalNetworks: 0,
@@ -45,60 +51,19 @@ export function ResourceMetrics() {
 
   const fetchMetrics = async () => {
     try {
-      // Fetch Docker stats
-      const statsOutput = await execDocker(["stats", "--no-stream", "--format", 
-        "{{.Container}}|{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}"]);
+      const response = await fetch("/api/docker/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch Docker stats");
+      }
       
-      const lines = statsOutput.trim().split("\n").filter(line => line);
-      const parsedMetrics: ContainerMetrics[] = lines.map(line => {
-        const parts = line.split("|");
-        return {
-          containerId: parts[0]?.substring(0, 12) || "",
-          name: parts[1] || "",
-          cpuPercent: parseFloat(parts[2]?.replace("%", "")) || 0,
-          memoryUsage: parts[3]?.split(" / ")[0] || "0B",
-          memoryLimit: parts[3]?.split(" / ")[1] || "0B",
-          memoryPercent: parseFloat(parts[4]?.replace("%", "")) || 0,
-          netIO: parts[5] || "0B / 0B",
-          blockIO: parts[6] || "0B / 0B",
-          pids: parseInt(parts[7]) || 0,
-        };
+      const data = await response.json();
+      setMetrics(data.metrics || []);
+      setSystemStats(data.systemStats || {
+        totalContainers: 0,
+        runningContainers: 0,
+        totalNetworks: 0,
+        totalVolumes: 0,
       });
-
-      setMetrics(parsedMetrics);
-
-      // Fetch system stats
-      const infoOutput = await execDocker(["system", "df", "--format", 
-        "{{.Type}}|{{.TotalCount}}|{{.Active}}"]);
-      
-      const infoLines = infoOutput.trim().split("\n").filter(line => line);
-      let containers = 0;
-      let networkCount = 0;
-      let volumes = 0;
-      
-      infoLines.forEach(line => {
-        const [type, total, active] = line.split("|");
-        if (type === "Images") {
-          // handled separately
-        } else if (type === "Containers") {
-          containers = parseInt(active) || 0;
-        } else if (type === "Local Volumes") {
-          volumes = parseInt(total) || 0;
-        } else if (type === "Networks") {
-          networkCount = parseInt(total) || 0;
-        }
-      });
-
-      const networkOutput = await execDocker(["network", "ls", "--format", "{{.ID}}"]);
-      const networks = networkOutput.trim().split("\n").filter(n => n).length;
-
-      setSystemStats({
-        totalContainers: parsedMetrics.length,
-        runningContainers: containers,
-        totalNetworks: networks,
-        totalVolumes: volumes,
-      });
-
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to fetch metrics:", error);
@@ -277,17 +242,3 @@ function ContainerMetricRow({ metric }: ContainerMetricRowProps) {
   );
 }
 
-// Helper function for Docker commands
-const execDocker = (args: string[]): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("docker", args);
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (data: Buffer) => (stdout += data.toString()));
-    proc.stderr.on("data", (data: Buffer) => (stderr += data.toString()));
-    proc.on("close", (code: number) => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr || `Docker command failed`));
-    });
-  });
-};

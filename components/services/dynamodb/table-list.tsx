@@ -25,17 +25,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Search, Trash2, Eye, Database } from "lucide-react";
+import { Search, Trash2, Eye, Database, Plus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { formatBytes } from "@/lib/utils";
 import { DynamoDBTable } from "@/types";
+import { CreateTableDialog } from "./create-table-dialog";
 
 interface TableListProps {
   onSelectTable: (tableName: string) => void;
+  selectedTable?: string | null;
 }
 
-export function TableList({ onSelectTable }: TableListProps) {
+export function TableList({ onSelectTable, selectedTable }: TableListProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { data: tables, isLoading, error } = useDynamoDBTables();
   const deleteTable = useDeleteTable();
 
@@ -96,16 +99,23 @@ export function TableList({ onSelectTable }: TableListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search tables..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search tables..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Table
+        </Button>
       </div>
+      <CreateTableDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       <div className="rounded-md border">
         <Table>
@@ -123,7 +133,9 @@ export function TableList({ onSelectTable }: TableListProps) {
             {filteredTables?.map((table) => (
               <TableRow
                 key={table.tableName}
-                className="cursor-pointer"
+                className={`cursor-pointer ${
+                  selectedTable === table.tableName ? "bg-muted/50" : ""
+                }`}
                 onClick={() => onSelectTable(table.tableName)}
               >
                 <TableCell className="font-medium">{table.tableName}</TableCell>

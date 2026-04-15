@@ -201,4 +201,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     enabled: true,
     href: "/services/efs",
   },
+  {
+    id: "dynamodb",
+    name: "dynamodb",
+    displayName: "DynamoDB",
+    icon: "Table2",
+    status: "unknown",
+    description: "NoSQL database service",
+    enabled: true,
+    href: "/services/dynamodb",
+  },
 ];

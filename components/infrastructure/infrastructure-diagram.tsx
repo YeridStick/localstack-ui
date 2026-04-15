@@ -8,6 +8,8 @@ import {
   Server, 
   Database, 
   Globe, 
+  HardDrive,
+  MessageSquare,
   ArrowRight,
   Activity,
   Boxes
@@ -44,7 +46,7 @@ export function InfrastructureDiagram() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4">
         <SummaryCard
           title="VPCs"
           value={data.summary.totalVPCs}
@@ -68,6 +70,24 @@ export function InfrastructureDiagram() {
           value={data.summary.totalELB}
           icon={Globe}
           color="bg-green-500"
+        />
+        <SummaryCard
+          title="S3 Buckets"
+          value={data.summary.totalS3}
+          icon={HardDrive}
+          color="bg-amber-500"
+        />
+        <SummaryCard
+          title="SQS Queues"
+          value={data.summary.totalSQS}
+          icon={MessageSquare}
+          color="bg-cyan-500"
+        />
+        <SummaryCard
+          title="DynamoDB"
+          value={data.summary.totalDynamoDB}
+          icon={Database}
+          color="bg-indigo-500"
         />
       </div>
 
@@ -113,6 +133,48 @@ export function InfrastructureDiagram() {
           type="rds"
           resources={data.rdsInstances.filter(i => !i.vpcId)}
         />
+      )}
+
+      {/* Global Resources */}
+      {(data.s3Buckets.length > 0 || data.sqsQueues.length > 0 || data.dynamoTables.length > 0) && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Boxes className="h-5 w-5" />
+            Global Resources
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SimpleResourceListCard
+              title="S3 Buckets"
+              icon={HardDrive}
+              iconClassName="text-amber-500"
+              resources={data.s3Buckets}
+              emptyLabel="No S3 buckets found"
+              getMeta={(resource) =>
+                resource.createdAt
+                  ? new Date(resource.createdAt).toLocaleString()
+                  : undefined
+              }
+            />
+            <SimpleResourceListCard
+              title="SQS Queues"
+              icon={MessageSquare}
+              iconClassName="text-cyan-500"
+              resources={data.sqsQueues}
+              emptyLabel="No SQS queues found"
+              getMeta={(resource) => resource.queueUrl}
+            />
+            <SimpleResourceListCard
+              title="DynamoDB Tables"
+              icon={Database}
+              iconClassName="text-indigo-500"
+              resources={data.dynamoTables}
+              emptyLabel="No DynamoDB tables found"
+              getMeta={(resource) =>
+                `Status: ${resource.status || "unknown"} - Items: ${resource.itemCount ?? 0}`
+              }
+            />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -305,6 +367,56 @@ function UnattachedResourcesCard({ title, type, resources }: UnattachedResources
             />
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface SimpleResourceListCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClassName: string;
+  resources: any[];
+  emptyLabel: string;
+  getMeta?: (resource: any) => string | undefined;
+}
+
+function SimpleResourceListCard({
+  title,
+  icon: Icon,
+  iconClassName,
+  resources,
+  emptyLabel,
+  getMeta,
+}: SimpleResourceListCardProps) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Icon className={`h-4 w-4 ${iconClassName}`} />
+          {title} ({resources.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {resources.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+        ) : (
+          <div className="space-y-2">
+            {resources.map((resource) => (
+              <div
+                key={resource.id}
+                className="rounded-md border bg-muted/40 p-2 text-xs"
+              >
+                <p className="font-medium truncate">{resource.name || resource.id}</p>
+                {getMeta && (
+                  <p className="text-muted-foreground truncate">
+                    {getMeta(resource)}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

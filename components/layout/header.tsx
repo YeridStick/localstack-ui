@@ -13,6 +13,7 @@ import { RefreshCw, ChevronRight, Cloud, Globe2 } from "lucide-react";
 const STATIC_PAGES: Record<string, string> = {
   "/": "Overview",
   "/services/infrastructure": "Infrastructure",
+  "/services/study": "Study Lab",
 };
 
 function toTitleCase(value: string): string {
@@ -58,7 +59,7 @@ export function Header() {
   };
 
   return (
-    <header className="border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+    <header className="border-b border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex min-h-16 items-center justify-between gap-4 px-6">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {breadcrumbs.map((label, index) => (

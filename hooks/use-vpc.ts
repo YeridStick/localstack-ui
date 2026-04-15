@@ -79,7 +79,7 @@ export function useDeleteCloudFormationStack() {
 // Infrastructure Diagram Data
 export interface InfrastructureNode {
   id: string;
-  type: "vpc" | "ec2" | "rds" | "elb";
+  type: "vpc" | "ec2" | "rds" | "elb" | "s3" | "sqs" | "dynamodb";
   name: string;
   state?: string;
   status?: string;
@@ -92,6 +92,10 @@ export interface InfrastructureNode {
   cidrBlock?: string;
   vpcId?: string;
   dnsName?: string;
+  queueUrl?: string;
+  createdAt?: string;
+  itemCount?: number;
+  tableSizeBytes?: number;
 }
 
 export interface InfrastructureConnection {
@@ -108,12 +112,18 @@ export interface InfrastructureData {
   ec2Instances: InfrastructureNode[];
   rdsInstances: InfrastructureNode[];
   loadBalancers: InfrastructureNode[];
+  s3Buckets: InfrastructureNode[];
+  sqsQueues: InfrastructureNode[];
+  dynamoTables: InfrastructureNode[];
   connections: InfrastructureConnection[];
   summary: {
     totalVPCs: number;
     totalEC2: number;
     totalRDS: number;
     totalELB: number;
+    totalS3: number;
+    totalSQS: number;
+    totalDynamoDB: number;
     totalConnections: number;
   };
 }

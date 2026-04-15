@@ -13,6 +13,7 @@ import {
   Clock,
   FileText,
   Layers,
+  BookOpenCheck,
   Globe,
   Shield,
   Zap,
@@ -128,6 +129,20 @@ export function Sidebar({ className }: SidebarProps) {
             >
               <Activity className="h-4 w-4" />
               <span>Infrastructure</span>
+            </div>
+          </Link>
+
+          <Link href="/services/study">
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                pathname === "/services/study"
+                  ? "bg-orange-500/20 text-orange-200"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
+              )}
+            >
+              <BookOpenCheck className="h-4 w-4" />
+              <span>Study Lab</span>
             </div>
           </Link>
 
