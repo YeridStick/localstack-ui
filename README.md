@@ -104,6 +104,45 @@ If UI runs in Docker Compose, `OLLAMA_BASE_URL` is set to `http://host.docker.in
 - `avoidRecent`: `true` | `false`
 - `recentQuestionKeys`: `string[]` (keys returned by previous quiz responses)
 
+### Mock exam API
+
+`POST /api/study/mock-exam` supports:
+
+- `certificationGoal`
+- `focusTopic`
+- `difficulty`
+- `totalQuestions` (5-80)
+- `durationMinutes` (10-180)
+- `avoidRecent`
+- `recentQuestionKeys`
+
+Response includes:
+
+- `examId`
+- `questions` (bank-based, with `domain`, `tags`, `correctAnswer`, `explanation`, and `sources`)
+- `blueprint` by certification domain
+- `durationMinutes`
+- `questionKeys`
+- `officialSources` (deduplicated official references for the full exam)
+- `recommendations`
+- optional `warning` when the unique pool is smaller than requested
+
+### Study center API
+
+`GET /api/study/center` supports:
+
+- `certificationGoal`
+- `focusTopic`
+- `difficulty`
+
+Response includes:
+
+- Guided roadmap modules
+- Hands-on labs mapped to existing service pages
+- AWS-vs-local parity notes
+- 4-day study routine
+- Latest updates from official AWS feeds (`aws.amazon.com/new/feed` and `aws.amazon.com/blogs/aws/feed`)
+
 ## Scripts
 
 ```bash

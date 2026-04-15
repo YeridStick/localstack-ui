@@ -1,4 +1,9 @@
 export type StudyDifficulty = "beginner" | "intermediate" | "advanced";
+export type ExamDomain =
+  | "Cloud Concepts"
+  | "Security and Compliance"
+  | "Technology"
+  | "Billing and Pricing";
 
 export interface GlossaryEntry {
   term: string;
@@ -14,7 +19,20 @@ export interface BankQuizQuestion {
   correctAnswer: string;
   explanation: string;
   tags: string[];
+  domain: ExamDomain;
   difficulty: StudyDifficulty;
+}
+
+export interface ExamBlueprintEntry {
+  domain: ExamDomain;
+  weightPercent: number;
+  targetQuestions: number;
+}
+
+export interface StudySourceReference {
+  id: string;
+  title: string;
+  url: string;
 }
 
 interface ScenarioQuestion {
@@ -38,6 +56,21 @@ interface BankGenerationResult {
   questions: BankQuizQuestion[];
   glossary: GlossaryEntry[];
   questionKeys: string[];
+}
+
+interface MockExamGenerationInput {
+  certificationGoal: string;
+  focusTopic: string;
+  difficulty: StudyDifficulty;
+  totalQuestions: number;
+  excludeKeys?: Set<string>;
+}
+
+interface MockExamGenerationResult {
+  questions: BankQuizQuestion[];
+  questionKeys: string[];
+  blueprint: ExamBlueprintEntry[];
+  availablePool: number;
 }
 
 const GLOSSARY: GlossaryEntry[] = [
@@ -407,6 +440,107 @@ const SCENARIO_QUESTIONS: ScenarioQuestion[] = [
   },
 ];
 
+const STUDY_SOURCE_CATALOG: StudySourceReference[] = [
+  {
+    id: "clf-c02-guide",
+    title: "AWS Certified Cloud Practitioner - Exam Guide",
+    url: "https://d1.awsstatic.com/training-and-certification/docs-cloud-practitioner/AWS-Certified-Cloud-Practitioner_Exam-Guide.pdf",
+  },
+  {
+    id: "well-architected",
+    title: "AWS Well-Architected Framework",
+    url: "https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html",
+  },
+  {
+    id: "iam-best-practices",
+    title: "IAM Security Best Practices",
+    url: "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html",
+  },
+  {
+    id: "iam-policies",
+    title: "IAM Policies - User Guide",
+    url: "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html",
+  },
+  {
+    id: "s3-user-guide",
+    title: "Amazon S3 User Guide",
+    url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html",
+  },
+  {
+    id: "ec2-user-guide",
+    title: "Amazon EC2 User Guide",
+    url: "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html",
+  },
+  {
+    id: "lambda-guide",
+    title: "AWS Lambda Developer Guide",
+    url: "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html",
+  },
+  {
+    id: "vpc-guide",
+    title: "Amazon VPC User Guide",
+    url: "https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html",
+  },
+  {
+    id: "rds-guide",
+    title: "Amazon RDS User Guide",
+    url: "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Welcome.html",
+  },
+  {
+    id: "dynamodb-guide",
+    title: "Amazon DynamoDB Developer Guide",
+    url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html",
+  },
+  {
+    id: "cloudwatch-guide",
+    title: "Amazon CloudWatch User Guide",
+    url: "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/WhatIsCloudWatch.html",
+  },
+  {
+    id: "cloudtrail-guide",
+    title: "AWS CloudTrail User Guide",
+    url: "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html",
+  },
+  {
+    id: "billing-guide",
+    title: "Billing and Cost Management User Guide",
+    url: "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-what-is.html",
+  },
+  {
+    id: "budgets-guide",
+    title: "AWS Budgets User Guide",
+    url: "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html",
+  },
+  {
+    id: "sqs-guide",
+    title: "Amazon SQS Developer Guide",
+    url: "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html",
+  },
+  {
+    id: "eventbridge-guide",
+    title: "Amazon EventBridge User Guide",
+    url: "https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html",
+  },
+];
+
+const TAG_SOURCE_MAP: Record<string, string[]> = {
+  fundamentos: ["clf-c02-guide", "well-architected"],
+  architecture: ["well-architected", "clf-c02-guide"],
+  security: ["iam-best-practices", "clf-c02-guide"],
+  iam: ["iam-policies", "iam-best-practices"],
+  storage: ["s3-user-guide", "clf-c02-guide"],
+  compute: ["ec2-user-guide", "lambda-guide"],
+  serverless: ["lambda-guide", "eventbridge-guide"],
+  networking: ["vpc-guide", "clf-c02-guide"],
+  database: ["rds-guide", "dynamodb-guide"],
+  operations: ["cloudwatch-guide", "cloudtrail-guide"],
+  monitoring: ["cloudwatch-guide"],
+  governance: ["cloudtrail-guide", "billing-guide"],
+  pricing: ["billing-guide", "budgets-guide", "clf-c02-guide"],
+  integration: ["sqs-guide", "eventbridge-guide"],
+  reliability: ["well-architected", "vpc-guide"],
+};
+
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -418,6 +552,36 @@ function normalizeText(value: string): string {
 
 export function buildQuestionKey(question: string, answer: string): string {
   return normalizeText(`${question}::${answer}`).slice(0, 120);
+}
+
+export function getStudySourcesForTags(
+  tags: string[],
+  limit = 4,
+): StudySourceReference[] {
+  const sourceIds = new Set<string>();
+
+  for (const tag of tags) {
+    const mapped = TAG_SOURCE_MAP[tag] || [];
+    mapped.forEach((id) => sourceIds.add(id));
+  }
+
+  if (sourceIds.size === 0) {
+    sourceIds.add("clf-c02-guide");
+  }
+
+  const catalogById = new Map(
+    STUDY_SOURCE_CATALOG.map((source) => [source.id, source]),
+  );
+
+  const selected: StudySourceReference[] = [];
+  for (const id of sourceIds) {
+    const source = catalogById.get(id);
+    if (!source) continue;
+    selected.push(source);
+    if (selected.length >= Math.max(limit, 1)) break;
+  }
+
+  return selected;
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -498,6 +662,88 @@ function deriveFocusTags(focusTopic: string, certificationGoal: string): Set<str
   return tags;
 }
 
+function domainFromTags(tags: string[]): ExamDomain {
+  if (tags.some((tag) => ["pricing"].includes(tag))) {
+    return "Billing and Pricing";
+  }
+
+  if (tags.some((tag) => ["security", "iam", "governance"].includes(tag))) {
+    return "Security and Compliance";
+  }
+
+  if (
+    tags.some((tag) =>
+      ["fundamentos", "reliability", "regions", "availability-zones"].includes(
+        tag,
+      ),
+    )
+  ) {
+    return "Cloud Concepts";
+  }
+
+  return "Technology";
+}
+
+function buildCertificationBlueprint(
+  certificationGoal: string,
+  totalQuestions: number,
+): ExamBlueprintEntry[] {
+  const normalized = normalizeText(certificationGoal);
+  const cloudPractitioner =
+    normalized.includes("cloud-practitioner") ||
+    normalized.includes("practitioner");
+
+  const weights: Array<{ domain: ExamDomain; weightPercent: number }> =
+    cloudPractitioner
+      ? [
+          { domain: "Cloud Concepts", weightPercent: 24 },
+          { domain: "Security and Compliance", weightPercent: 30 },
+          { domain: "Technology", weightPercent: 34 },
+          { domain: "Billing and Pricing", weightPercent: 12 },
+        ]
+      : [
+          { domain: "Cloud Concepts", weightPercent: 25 },
+          { domain: "Security and Compliance", weightPercent: 25 },
+          { domain: "Technology", weightPercent: 35 },
+          { domain: "Billing and Pricing", weightPercent: 15 },
+        ];
+
+  const withTargets = weights.map((item) => {
+    const exact = (item.weightPercent / 100) * totalQuestions;
+    return {
+      ...item,
+      targetQuestions: Math.floor(exact),
+      remainder: exact - Math.floor(exact),
+    };
+  });
+
+  let assigned = withTargets.reduce(
+    (sum, item) => sum + item.targetQuestions,
+    0,
+  );
+  let remaining = Math.max(totalQuestions - assigned, 0);
+
+  const sorted = [...withTargets].sort((a, b) => b.remainder - a.remainder);
+  let cursor = 0;
+  while (remaining > 0 && sorted.length > 0) {
+    sorted[cursor % sorted.length].targetQuestions += 1;
+    remaining -= 1;
+    cursor += 1;
+  }
+
+  assigned = withTargets.reduce((sum, item) => sum + item.targetQuestions, 0);
+  if (assigned !== totalQuestions && withTargets.length > 0) {
+    const diff = totalQuestions - assigned;
+    withTargets[0].targetQuestions += diff;
+  }
+
+  return withTargets.map((item) => ({
+    domain: item.domain,
+    weightPercent: item.weightPercent,
+    targetQuestions: item.targetQuestions,
+  }));
+}
+
 function pickDistractors(
   source: GlossaryEntry[],
   currentTerm: string,
@@ -514,25 +760,55 @@ function buildDefinitionQuestions(
   glossary: GlossaryEntry[],
   requestedDifficulty: StudyDifficulty,
 ): BankQuizQuestion[] {
-  return glossary
-    .filter((entry) => matchesDifficulty(requestedDifficulty, entry.difficulty))
-    .map((entry) => {
-      const distractors = pickDistractors(glossary, entry.term, 3);
-      const options = shuffle([entry.definition, ...distractors]).slice(0, 4);
+  const termPool = glossary.map((entry) => entry.term);
 
-      return {
+  return glossary.flatMap((entry) => {
+    if (!matchesDifficulty(requestedDifficulty, entry.difficulty)) {
+      return [];
+    }
+
+    const distractorDefinitions = pickDistractors(glossary, entry.term, 3);
+    const definitionOptions = shuffle([entry.definition, ...distractorDefinitions]).slice(
+      0,
+      4,
+    );
+
+    const distractorTerms = shuffle(
+      termPool.filter((term) => term !== entry.term),
+    ).slice(0, 3);
+    const termOptions = shuffle([entry.term, ...distractorTerms]).slice(0, 4);
+
+    const domain = domainFromTags(entry.tags);
+
+    return [
+      {
         key: buildQuestionKey(
           `Que describe mejor el termino AWS ${entry.term}?`,
           entry.definition,
         ),
         question: `Que describe mejor el termino AWS "${entry.term}"?`,
-        options,
+        options: definitionOptions,
         correctAnswer: entry.definition,
         explanation: `La opcion correcta define ${entry.term} en el contexto de arquitectura AWS.`,
         tags: entry.tags,
+        domain,
         difficulty: entry.difficulty,
-      };
-    });
+      },
+      {
+        key: buildQuestionKey(
+          `Que servicio o concepto coincide con esta definicion: ${entry.definition}`,
+          entry.term,
+        ),
+        question: `Que servicio o concepto coincide con esta definicion: "${entry.definition}"?`,
+        options: termOptions,
+        correctAnswer: entry.term,
+        explanation: `La respuesta correcta es ${entry.term} segun su definicion oficial resumida.`,
+        tags: entry.tags,
+        domain,
+        difficulty: entry.difficulty,
+      },
+    ];
+  });
 }
 
 function buildScenarioQuestionPool(
@@ -547,6 +823,7 @@ function buildScenarioQuestionPool(
     .map((item) => ({
       ...item,
       key: buildQuestionKey(item.question, item.correctAnswer),
+      domain: domainFromTags(item.tags),
     }));
 }
 
@@ -625,5 +902,58 @@ export function generateQuizFromBank({
     questions: selected,
     glossary: selectedGlossary,
     questionKeys,
+  };
+}
+
+export function generateMockExamFromBank({
+  certificationGoal,
+  focusTopic,
+  difficulty,
+  totalQuestions,
+  excludeKeys,
+}: MockExamGenerationInput): MockExamGenerationResult {
+  const safeTotal = Math.min(Math.max(totalQuestions, 5), 80);
+  const focusTags = deriveFocusTags(focusTopic, certificationGoal);
+  const glossaryBase = buildRelevantGlossary(focusTags, difficulty);
+  const definitionQuestions = buildDefinitionQuestions(glossaryBase, difficulty);
+  const scenarioQuestions = buildScenarioQuestionPool(focusTags, difficulty);
+  const pool = uniqueByKey(shuffle([...definitionQuestions, ...scenarioQuestions])).filter(
+    (question) => !excludeKeys?.has(question.key),
+  );
+
+  const blueprint = buildCertificationBlueprint(certificationGoal, safeTotal);
+  const selected: BankQuizQuestion[] = [];
+
+  for (const slice of blueprint) {
+    const domainPool = pool.filter((question) => question.domain === slice.domain);
+    const needed = Math.max(slice.targetQuestions, 0);
+
+    for (const question of domainPool) {
+      if (selected.length >= safeTotal) break;
+      if (selected.some((item) => item.key === question.key)) continue;
+      if (
+        selected.filter((item) => item.domain === slice.domain).length >= needed
+      ) {
+        break;
+      }
+      selected.push(question);
+    }
+  }
+
+  if (selected.length < safeTotal) {
+    for (const question of pool) {
+      if (selected.length >= safeTotal) break;
+      if (selected.some((item) => item.key === question.key)) continue;
+      selected.push(question);
+    }
+  }
+
+  const questionKeys = selected.map((question) => question.key);
+
+  return {
+    questions: selected,
+    questionKeys,
+    blueprint,
+    availablePool: pool.length,
   };
 }

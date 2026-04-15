@@ -34,11 +34,14 @@ interface OllamaChatResponse {
   message?: {
     role?: string;
     content?: string;
+    thinking?: string;
   };
+  done_reason?: string;
 }
 
 interface OllamaGenerateResponse {
   response?: string;
+  done_reason?: string;
 }
 
 interface QuizQuestion {
@@ -143,6 +146,7 @@ Reglas: 4 opciones por pregunta, una sola correcta, explicaciones cortas y clara
 
   return `Eres un tutor de AWS y LocalStack, enfocado en preparar certificaciones con practica guiada. ${context}
 Responde en espanol con enfoque didactico, paso a paso, y ejemplos aplicables en local.
+Limita la respuesta a 8-10 lineas salvo que el usuario pida detalle largo.
 Si el usuario se equivoca, corrige con respeto y da una mini practica para reforzar.`;
 }
 
@@ -243,6 +247,80 @@ function buildGeneratePrompt(
   return `${lines.join("\n\n")}\n\nASSISTANT:`;
 }
 
+function getLatestUserMessage(messages: StudyMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i]?.role === "user") {
+      return messages[i].content;
+    }
+  }
+  return "";
+}
+
+function buildTutorFallbackAnswer(
+  certificationGoal: string,
+  focusTopic: string,
+  difficulty: Difficulty,
+  userQuestion: string,
+): string {
+  const question = userQuestion.toLowerCase();
+  const goal = certificationGoal || "AWS Cloud Practitioner";
+  const topic = focusTopic || "Fundamentos de AWS";
+
+  if (
+    (question.includes("region") || question.includes("regi")) &&
+    (question.includes("az") || question.includes("zona de disponibilidad"))
+  ) {
+    return [
+      "Modo respaldo local: no pude consultar Ollama en este intento.",
+      "",
+      "Diferencia clave:",
+      "- Region: area geografica completa (ej. us-east-1).",
+      "- AZ (Availability Zone): centro de datos aislado dentro de una Region (ej. us-east-1a).",
+      "",
+      "Para examen:",
+      "- Multi-AZ: alta disponibilidad dentro de la misma Region.",
+      "- Multi-Region: resiliencia geografica y menor impacto por desastres regionales.",
+      "",
+      "Mini practica:",
+      "1) Crea recursos en 2 AZ distintas de us-east-1.",
+      "2) Simula fallo de una AZ y verifica continuidad.",
+      "3) Explica cuando usarias Multi-Region vs Multi-AZ.",
+    ].join("\n");
+  }
+
+  if (question.includes("iam") || question.includes("permiso")) {
+    return [
+      "Modo respaldo local: no pude consultar Ollama en este intento.",
+      "",
+      "Resumen IAM:",
+      "- Usuario: identidad de persona/aplicacion.",
+      "- Rol: permisos temporales asumibles.",
+      "- Policy: JSON que define acciones permitidas/denegadas.",
+      "- Buenas practicas: least privilege + MFA + evitar credenciales root.",
+      "",
+      "Mini practica:",
+      "1) Crea rol de solo lectura para S3.",
+      "2) Prueba acceso a ListBucket (debe pasar).",
+      "3) Prueba DeleteBucket (debe fallar).",
+    ].join("\n");
+  }
+
+  return [
+    "Modo respaldo local: no pude consultar Ollama en este intento.",
+    "",
+    `Meta: ${goal}`,
+    `Tema: ${topic}`,
+    `Nivel: ${difficulty}`,
+    "",
+    "Plan rapido de estudio:",
+    "1) Define 3 conceptos clave del tema.",
+    "2) Haz 1 laboratorio local en LocalStack.",
+    "3) Resuelve 5 preguntas tipo certificacion y revisa errores.",
+    "",
+    "Si quieres, te guio paso a paso con una sesion corta de 20 minutos.",
+  ].join("\n");
+}
+
 type CallSuccess = { answer: string };
 type CallError = { status: number; details: string };
 
@@ -255,11 +333,24 @@ function buildModelOptions(
   top_p: number;
   num_predict: number;
 } {
+  const quizBudget =
+    latencyProfile === "deep"
+      ? 1800
+      : latencyProfile === "balanced"
+        ? 1200
+        : 700;
+  const tutorBudget =
+    latencyProfile === "deep"
+      ? 650
+      : latencyProfile === "balanced"
+        ? 420
+        : 280;
+
   if (latencyProfile === "deep") {
     return {
       temperature,
       top_p: 0.9,
-      num_predict: mode === "quiz" ? 1800 : 1200,
+      num_predict: mode === "quiz" ? quizBudget : tutorBudget,
     };
   }
 
@@ -267,14 +358,14 @@ function buildModelOptions(
     return {
       temperature,
       top_p: 0.8,
-      num_predict: mode === "quiz" ? 1200 : 900,
+      num_predict: mode === "quiz" ? quizBudget : tutorBudget,
     };
   }
 
   return {
     temperature,
     top_p: 0.7,
-    num_predict: mode === "quiz" ? 700 : 600,
+    num_predict: mode === "quiz" ? quizBudget : tutorBudget,
   };
 }
 
@@ -288,6 +379,7 @@ async function callOllamaChat(
   const payload: {
     model: string;
     stream: boolean;
+    think: boolean;
     messages: Array<{ role: "system" | ChatRole; content: string }>;
     options: {
       temperature: number;
@@ -298,6 +390,7 @@ async function callOllamaChat(
   } = {
     model: OLLAMA_MODEL,
     stream: false,
+    think: false,
     messages,
     options: buildModelOptions(temperature, latencyProfile, mode),
   };
@@ -322,9 +415,14 @@ async function callOllamaChat(
   const responsePayload = (await response.json()) as OllamaChatResponse;
   const answer = cleanText(responsePayload.message?.content, 12000);
   if (!answer) {
+    const doneReason = cleanText(responsePayload.done_reason, 120);
+    const thinkingLength =
+      typeof responsePayload.message?.thinking === "string"
+        ? responsePayload.message.thinking.length
+        : 0;
     return {
       status: 502,
-      details: "Ollama chat no devolvio contenido util.",
+      details: `Ollama chat no devolvio contenido util. done_reason=${doneReason || "unknown"} thinking_len=${thinkingLength}`,
     };
   }
 
@@ -343,6 +441,7 @@ async function callOllamaGenerate(
     model: string;
     prompt: string;
     stream: boolean;
+    think: boolean;
     options: {
       temperature: number;
       top_p: number;
@@ -353,6 +452,7 @@ async function callOllamaGenerate(
     model: OLLAMA_MODEL,
     prompt,
     stream: false,
+    think: false,
     options: buildModelOptions(temperature, latencyProfile, mode),
   };
 
@@ -376,9 +476,10 @@ async function callOllamaGenerate(
   const responsePayload = (await response.json()) as OllamaGenerateResponse;
   const answer = cleanText(responsePayload.response, 12000);
   if (!answer) {
+    const doneReason = cleanText(responsePayload.done_reason, 120);
     return {
       status: 502,
-      details: "Ollama generate no devolvio contenido util.",
+      details: `Ollama generate no devolvio contenido util. done_reason=${doneReason || "unknown"}`,
     };
   }
 
@@ -827,16 +928,23 @@ Formato exacto:
           ? `${secondAttempt.status}: ${secondAttempt.details}`
           : "";
 
-      return NextResponse.json(
-        {
-          error: "No se pudo consultar Ollama.",
-          details: [primaryError, secondaryError].filter(Boolean).join(" | "),
-          baseUrl: OLLAMA_BASE_URL,
-          model: OLLAMA_MODEL,
-          apiMode: OLLAMA_API_MODE,
-        },
-        { status: 502 },
+      const details = [primaryError, secondaryError].filter(Boolean).join(" | ");
+      const fallbackAnswer = buildTutorFallbackAnswer(
+        certificationGoal,
+        focusTopic,
+        difficulty,
+        getLatestUserMessage(messages),
       );
+
+      return NextResponse.json({
+        mode,
+        model: OLLAMA_MODEL,
+        source: "local-fallback",
+        warning:
+          "No se pudo consultar Ollama en este intento. Se activo respuesta local de respaldo.",
+        details,
+        answer: fallbackAnswer,
+      });
     }
 
     const answer = result.answer;
