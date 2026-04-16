@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { getHealthRefreshIntervalMs, isAutoRefreshEnabled } from "@/lib/aws/runtime-config";
 import { 
   Cpu, 
   MemoryStick, 
@@ -45,7 +46,10 @@ export function ResourceMetrics() {
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 5000); // Update every 5 seconds
+    if (!isAutoRefreshEnabled()) {
+      return;
+    }
+    const interval = setInterval(fetchMetrics, getHealthRefreshIntervalMs());
     return () => clearInterval(interval);
   }, []);
 
@@ -241,4 +245,3 @@ function ContainerMetricRow({ metric }: ContainerMetricRowProps) {
     </div>
   );
 }
-

@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SQSQueue, SQSMessage } from "@/types";
 import { toast } from "sonner";
+import { getHealthRefreshIntervalMs, isAutoRefreshEnabled } from "@/lib/aws/runtime-config";
+
+const AUTO_REFRESH = isAutoRefreshEnabled();
+const BASE_REFRESH_MS = getHealthRefreshIntervalMs();
 
 // List all queues
 export function useSQSQueues() {
@@ -131,7 +135,7 @@ export function useSQSMessages(queueUrl: string) {
       return data.messages as SQSMessage[];
     },
     enabled: !!queueUrl,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: AUTO_REFRESH ? BASE_REFRESH_MS : false,
   });
 }
 

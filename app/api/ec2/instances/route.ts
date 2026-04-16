@@ -9,32 +9,122 @@ import {
 } from "@aws-sdk/client-ec2";
 import { spawn } from "child_process";
 
-// Helper to execute docker commands
-const execDocker = (args: string[]): Promise<string> => {
+function toErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
+
+// Helper to execute docker commands with timeout and proper error handling.
+const execDocker = (
+  args: string[],
+  timeoutMs = 15_000
+): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const proc = spawn("docker", args);
+    const proc = spawn("docker", args, {
+      shell: process.platform === "win32",
+      windowsHide: true,
+    });
     let stdout = "";
     let stderr = "";
-    proc.stdout.on("data", (data) => (stdout += data.toString()));
-    proc.stderr.on("data", (data) => (stderr += data.toString()));
+    const timer = setTimeout(() => {
+      proc.kill("SIGKILL");
+      reject(
+        new Error(
+          `Docker command timed out (${timeoutMs}ms): docker ${args.join(" ")}`
+        )
+      );
+    }, timeoutMs);
+
+    proc.stdout?.on("data", (data) => (stdout += data.toString()));
+    proc.stderr?.on("data", (data) => (stderr += data.toString()));
     proc.on("close", (code) => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(stderr || `Docker command failed`));
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve(stdout.trim());
+        return;
+      }
+      reject(new Error(stderr || `Docker command failed with exit code ${code}`));
+    });
+    proc.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
     });
   });
+};
+
+const resolveDockerImage = (
+  image: string | undefined,
+  imageId: string | undefined
+): string => {
+  // If the caller already sent a Docker image, trust it.
+  if (image && image.includes(":")) {
+    return image;
+  }
+
+  // Map known AMI-like IDs to Docker images for simulation.
+  const imageMap: Record<string, string> = {
+    "ami-12345678": "alpine:latest",
+    "ami-87654321": "ubuntu:20.04",
+    "ami-abcd1234": "mcr.microsoft.com/windows/nanoserver:ltsc2022",
+    "ami-ubuntu": "ubuntu:22.04",
+    "ami-nginx": "nginx:alpine",
+  };
+  const requestedId = imageId || "ami-12345678";
+  return imageMap[requestedId] || "alpine:latest";
+};
+
+const canUseDocker = async (): Promise<boolean> => {
+  try {
+    await execDocker(["ps", "--format", "{{.ID}}"], 5000);
+    return true;
+  } catch (error) {
+    console.error("Docker is not available from API container:", toErrorMessage(error));
+    return false;
+  }
 };
 
 // Find Docker container by EC2 instance ID
 const findContainerForInstance = async (instanceId: string): Promise<string | null> => {
   try {
-    // miniStack labels containers with the instance ID
-    const containers = await execDocker([
+    // Preferred label used by this endpoint.
+    let containers = await execDocker([
       "ps", "-a",
       "--filter", `label=instance_id=${instanceId}`,
       "--format", "{{.ID}}"
     ]);
+
+    if (!containers) {
+      // Backward compatibility with older endpoint labels.
+      containers = await execDocker([
+        "ps",
+        "-a",
+        "--filter",
+        `label=ec2-instance-id=${instanceId}`,
+        "--format",
+        "{{.ID}}",
+      ]);
+    }
+
+    if (!containers) {
+      // Fallback by container name.
+      containers = await execDocker([
+        "ps",
+        "-a",
+        "--filter",
+        `name=ec2-${instanceId}`,
+        "--format",
+        "{{.ID}}",
+      ]);
+    }
+
     return containers.split("\n")[0] || null;
-  } catch {
+  } catch (error) {
+    console.error(
+      `Unable to resolve container for ${instanceId}:`,
+      toErrorMessage(error)
+    );
     return null;
   }
 };
@@ -44,6 +134,7 @@ export async function GET() {
   try {
     const command = new DescribeInstancesCommand({});
     const response = await ec2Client.send(command);
+    const dockerEnabled = await canUseDocker();
 
     // Filter out terminated instances and find containers
     const instancesPromises =
@@ -51,15 +142,20 @@ export async function GET() {
         (r) =>
           r.Instances?.filter((i) => i.State?.Name !== "terminated")
             .map(async (i) => {
-              // Find associated Docker container
-              const containerId = await findContainerForInstance(i.InstanceId!);
+              // Find associated Docker container only if Docker is available.
+              const containerId = dockerEnabled
+                ? await findContainerForInstance(i.InstanceId!)
+                : null;
+              const tags = i.Tags || [];
+              const dockerImageFromTag =
+                tags.find((t) => t.Key === "DockerImage")?.Value || null;
 
               return {
                 id: i.InstanceId,
                 instanceId: i.InstanceId,
-                containerId: containerId || `container-${i.InstanceId}`,
+                containerId: containerId || null,
                 name:
-                  i.Tags?.find((t) => t.Key === "Name")?.Value ||
+                  tags.find((t) => t.Key === "Name")?.Value ||
                   i.InstanceId,
                 type: i.InstanceType,
                 instanceType: i.InstanceType,
@@ -70,9 +166,9 @@ export async function GET() {
                 subnetId: i.SubnetId,
                 launchTime: i.LaunchTime,
                 imageId: i.ImageId,
-                image: i.ImageId,
+                image: dockerImageFromTag || i.ImageId,
                 availabilityZone: i.Placement?.AvailabilityZone,
-                tags: i.Tags,
+                tags,
               };
             }) || []
       ) || [];
@@ -92,12 +188,33 @@ export async function GET() {
 // POST - Create hybrid EC2 instance (miniStack + Docker)
 export async function POST(request: Request) {
   try {
-    const { imageId, instanceType, keyName, securityGroupIds, subnetId, tags, vpcId } =
+    const {
+      image,
+      imageId,
+      instanceType,
+      keyName,
+      securityGroupIds,
+      subnetId,
+      tags,
+      vpcId,
+    } =
       await request.json();
+    const dockerEnabled = await canUseDocker();
+    if (!dockerEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Docker no esta disponible en el contenedor localstack-ui. Revisa Docker CLI y /var/run/docker.sock.",
+        },
+        { status: 503 }
+      );
+    }
+    const dockerImage = resolveDockerImage(image, imageId);
+    const resolvedImageId = imageId || "ami-12345678";
 
     // 1. Create EC2 instance in miniStack for AWS API compatibility
     const awsCommand = new RunInstancesCommand({
-      ImageId: imageId || "ami-12345678",
+      ImageId: resolvedImageId,
       InstanceType: instanceType || "t2.micro",
       MinCount: 1,
       MaxCount: 1,
@@ -110,6 +227,7 @@ export async function POST(request: Request) {
           Tags: [
             ...(tags?.Name ? [{ Key: "Name", Value: tags.Name }] : []),
             { Key: "managed-by", Value: "localstack-ui" },
+            { Key: "DockerImage", Value: dockerImage },
           ],
         },
       ],
@@ -121,39 +239,61 @@ export async function POST(request: Request) {
       throw new Error("EC2 instance ID was not returned by the emulator");
     }
 
-    // 2. Get VPC network name if vpcId provided
-    let networkName = "bridge";
-    if (vpcId) {
-      const vpcNetwork = await execDocker([
-        "network", "ls",
-        "--filter", `label=vpc-id=${vpcId}`,
-        "--format", "{{.Name}}"
-      ]);
-      if (vpcNetwork) networkName = vpcNetwork;
+    let containerId = "";
+    try {
+      // 2. Get VPC network name if vpcId provided
+      let networkName = "bridge";
+      if (vpcId) {
+        const vpcNetwork = await execDocker([
+          "network",
+          "ls",
+          "--filter",
+          `label=vpc-id=${vpcId}`,
+          "--format",
+          "{{.Name}}",
+        ]);
+        if (vpcNetwork) networkName = vpcNetwork;
+      }
+
+      // 3. Create real Docker container
+      const containerName = `ec2-${instanceId}`;
+      const dockerArgs = [
+        "run",
+        "-d",
+        "--name",
+        containerName,
+        "--network",
+        networkName,
+        "--label",
+        `instance_id=${instanceId}`,
+        "--label",
+        `ec2-instance-id=${instanceId}`,
+        "--label",
+        `managed-by=localstack-ui`,
+        "--label",
+        `instance-type=${instanceType || "t2.micro"}`,
+        "--label",
+        `ec2-instance-type=${instanceType || "t2.micro"}`,
+        "--label",
+        `vpc-id=${vpcId || "none"}`,
+        "--label",
+        "ec2-instance=true",
+        dockerImage,
+        "tail",
+        "-f",
+        "/dev/null", // Keep container running
+      ];
+
+      containerId = await execDocker(dockerArgs);
+    } catch (dockerError) {
+      // Rollback EC2 emulator instance if Docker container failed.
+      await ec2Client.send(
+        new TerminateInstancesCommand({
+          InstanceIds: [instanceId],
+        })
+      );
+      throw dockerError;
     }
-
-    // 3. Create real Docker container
-    const imageMap: Record<string, string> = {
-      "ami-12345678": "alpine:latest",
-      "ami-ubuntu": "ubuntu:22.04",
-      "ami-nginx": "nginx:alpine",
-    };
-    const dockerImage = imageMap[imageId] || "alpine:latest";
-
-    const containerName = `ec2-${instanceId}`;
-    const dockerArgs = [
-      "run", "-d",
-      "--name", containerName,
-      "--network", networkName,
-      "--label", `instance_id=${instanceId}`,
-      "--label", `managed-by=localstack-ui`,
-      "--label", `instance-type=${instanceType || "t2.micro"}`,
-      "--label", `vpc-id=${vpcId || "none"}`,
-      dockerImage,
-      "tail", "-f", "/dev/null"  // Keep container running
-    ];
-
-    const containerId = await execDocker(dockerArgs);
 
     return NextResponse.json({
       success: true,
@@ -161,10 +301,10 @@ export async function POST(request: Request) {
       containerId: containerId.substring(0, 12),
       message: "EC2 instance created with real Docker container",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("EC2 Create error:", error);
     return NextResponse.json(
-      { error: "Failed to create instance" },
+      { error: error?.message || "Failed to create instance" },
       { status: 500 }
     );
   }
@@ -233,8 +373,6 @@ export async function PATCH(request: Request) {
 
     // Handle Docker container state
     const containerId = await findContainerForInstance(instanceId);
-    const containerName = `ec2-${instanceId}`;
-
     if (action === "stop") {
       // Stop in AWS
       const awsCommand = new StopInstancesCommand({ InstanceIds: [instanceId] });

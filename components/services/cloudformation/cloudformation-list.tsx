@@ -223,20 +223,26 @@ Resources:
               }}
             />
             <SampleTemplateCard
-              title="EC2 Instance"
-              description="Launch an EC2 instance in a VPC"
+              title="Secure S3 Bucket"
+              description="Create an S3 bucket with encryption and public access block"
               onClick={() => {
-                setStackName("ec2-instance");
+                setStackName("secure-s3");
                 setTemplateBody(`AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  EC2Instance:
-    Type: AWS::EC2::Instance
+  StudyBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      ImageId: ami-12345678
-      InstanceType: t2.micro
-      Tags:
-        - Key: Name
-          Value: MyInstance`);
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true`);
                 setCreateDialogOpen(true);
               }}
             />

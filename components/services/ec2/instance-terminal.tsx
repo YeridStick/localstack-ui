@@ -287,7 +287,7 @@ export function InstanceTerminal({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copiedDocker, setCopiedDocker] = useState(false);
   const [copiedInstall, setCopiedInstall] = useState(false);
-  const [autoRefreshLogs, setAutoRefreshLogs] = useState(true);
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
 
   const dockerCommand = instance?.containerId
     ? `docker exec -it ${instance.containerId} sh`

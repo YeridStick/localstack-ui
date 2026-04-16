@@ -54,3 +54,8 @@ export function getHealthRefreshIntervalMs(): number {
   }
   return parsed;
 }
+
+export function isAutoRefreshEnabled(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_AUTO_REFRESH || "false").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes" || raw === "on";
+}

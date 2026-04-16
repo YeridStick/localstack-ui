@@ -55,7 +55,12 @@ const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL?.trim() || "http://127.0.0.1:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL?.trim() || "gemma4:e4b";
 const OLLAMA_API_MODE = (process.env.OLLAMA_API_MODE?.trim() || "auto").toLowerCase();
-const MAX_MESSAGES = 12;
+const OLLAMA_TIMEOUT_MS = Math.min(
+  Math.max(Number(process.env.OLLAMA_TIMEOUT_MS) || 35000, 1500),
+  60000,
+);
+const MAX_MESSAGES = 10;
+const MAX_TUTOR_MESSAGES = 6;
 const MAX_MESSAGE_LENGTH = 3000;
 const MAX_RECENT_KEYS = 250;
 
@@ -86,7 +91,7 @@ function rememberQuestionKeys(keys: string[]): void {
   }
 }
 
-function sanitizeMessages(input: unknown): StudyMessage[] {
+function sanitizeMessages(input: unknown, maxMessages = MAX_MESSAGES): StudyMessage[] {
   if (!Array.isArray(input)) return [];
 
   return input
@@ -100,7 +105,7 @@ function sanitizeMessages(input: unknown): StudyMessage[] {
       content: cleanText(item.content, MAX_MESSAGE_LENGTH),
     }))
     .filter((item) => item.content.length > 0)
-    .slice(-MAX_MESSAGES);
+    .slice(-maxMessages);
 }
 
 function parseGenerationStrategy(value: unknown): QuizGenerationStrategy {
@@ -324,6 +329,23 @@ function buildTutorFallbackAnswer(
 type CallSuccess = { answer: string };
 type CallError = { status: number; details: string };
 
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function buildModelOptions(
   temperature: number,
   latencyProfile: LatencyProfile,
@@ -341,10 +363,10 @@ function buildModelOptions(
         : 700;
   const tutorBudget =
     latencyProfile === "deep"
-      ? 650
+      ? 420
       : latencyProfile === "balanced"
-        ? 420
-        : 280;
+        ? 280
+        : 180;
 
   if (latencyProfile === "deep") {
     return {
@@ -399,11 +421,29 @@ async function callOllamaChat(
     payload.format = "json";
   }
 
-  const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${OLLAMA_BASE_URL}/api/chat`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      mode === "quiz" ? OLLAMA_TIMEOUT_MS + 3000 : OLLAMA_TIMEOUT_MS,
+    );
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        status: 504,
+        details: `Timeout chat > ${mode === "quiz" ? OLLAMA_TIMEOUT_MS + 3000 : OLLAMA_TIMEOUT_MS}ms`,
+      };
+    }
+    return {
+      status: 502,
+      details: error instanceof Error ? error.message : "Error de red en chat.",
+    };
+  }
 
   if (!response.ok) {
     return {
@@ -460,11 +500,29 @@ async function callOllamaGenerate(
     payload.format = "json";
   }
 
-  const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${OLLAMA_BASE_URL}/api/generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      mode === "quiz" ? OLLAMA_TIMEOUT_MS + 3000 : OLLAMA_TIMEOUT_MS,
+    );
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        status: 504,
+        details: `Timeout generate > ${mode === "quiz" ? OLLAMA_TIMEOUT_MS + 3000 : OLLAMA_TIMEOUT_MS}ms`,
+      };
+    }
+    return {
+      status: 502,
+      details: error instanceof Error ? error.message : "Error de red en generate.",
+    };
+  }
 
   if (!response.ok) {
     return {
@@ -653,7 +711,10 @@ export async function POST(request: NextRequest) {
       Math.max(Number(body.questionCount) || 5, 1),
       10,
     );
-    const messages = sanitizeMessages(body.messages);
+    const messages = sanitizeMessages(
+      body.messages,
+      mode === "tutor" ? MAX_TUTOR_MESSAGES : MAX_MESSAGES,
+    );
     const generationStrategy = parseGenerationStrategy(body.generationStrategy);
     const latencyProfile = parseLatencyProfile(body.latencyProfile);
     const avoidRecent = body.avoidRecent !== false;
@@ -874,17 +935,7 @@ Formato exacto:
     }
 
     let firstAttempt: CallSuccess | CallError;
-    let secondAttempt: CallSuccess | CallError | null = null;
-
-    if (preferGenerate) {
-      firstAttempt = await callOllamaGenerate(
-        ollamaMessages,
-        temperature,
-        mode,
-        latencyProfile,
-        expectsJson,
-      );
-    } else {
+    if (preferChat) {
       firstAttempt = await callOllamaChat(
         ollamaMessages,
         temperature,
@@ -892,41 +943,25 @@ Formato exacto:
         latencyProfile,
         expectsJson,
       );
+    } else {
+      // In auto mode, tutor prefers /generate for lower latency with Gemma.
+      firstAttempt = await callOllamaGenerate(
+        ollamaMessages,
+        temperature,
+        mode,
+        latencyProfile,
+        expectsJson,
+      );
     }
 
-    if ("status" in firstAttempt && !preferChat && !preferGenerate) {
-      secondAttempt = preferGenerate
-        ? await callOllamaChat(
-            ollamaMessages,
-            temperature,
-            mode,
-            latencyProfile,
-            expectsJson,
-          )
-        : await callOllamaGenerate(
-            ollamaMessages,
-            temperature,
-            mode,
-            latencyProfile,
-            expectsJson,
-          );
-    }
-
-    const result = secondAttempt && !("status" in secondAttempt)
-      ? secondAttempt
-      : !("status" in firstAttempt)
-        ? firstAttempt
-        : secondAttempt;
+    const result = !("status" in firstAttempt) ? firstAttempt : null;
 
     if (!result || "status" in result) {
       const primaryError =
         "status" in firstAttempt
           ? `${firstAttempt.status}: ${firstAttempt.details}`
           : "";
-      const secondaryError =
-        secondAttempt && "status" in secondAttempt
-          ? `${secondAttempt.status}: ${secondAttempt.details}`
-          : "";
+      const secondaryError = "";
 
       const details = [primaryError, secondaryError].filter(Boolean).join(" | ");
       const fallbackAnswer = buildTutorFallbackAnswer(

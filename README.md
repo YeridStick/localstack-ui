@@ -65,11 +65,13 @@ Create `.env.local` from `.env.example`.
 | `NEXT_PUBLIC_AWS_REGION` | Region for UI/client context | `us-east-1` |
 | `AWS_ACCESS_KEY_ID` | AWS key for emulator | `test` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret for emulator | `test` |
-| `NEXT_PUBLIC_REFRESH_INTERVAL` | Health polling interval (ms) | `5000` |
+| `NEXT_PUBLIC_AUTO_REFRESH` | Enables automatic polling for health/status queries | `false` |
+| `NEXT_PUBLIC_REFRESH_INTERVAL` | Polling interval (ms), used only if auto refresh is enabled | `5000` |
 | `OLLAMA_BASE_URL` | Server-side Ollama endpoint used by Study Lab API | `http://127.0.0.1:11434` |
 | `OLLAMA_MODEL` | Model name used for tutor and quiz generation | `gemma4:e4b` |
 | `NEXT_PUBLIC_OLLAMA_MODEL` | Model label shown in Study Lab UI | `gemma4:e4b` |
 | `OLLAMA_API_MODE` | Ollama endpoint strategy: `auto`, `chat`, or `generate` | `auto` |
+| `OLLAMA_TIMEOUT_MS` | Request timeout for Ollama calls (tutor uses this, quiz gets +3s) | `35000` |
 
 ## Study Lab (Gemma + Ollama)
 
@@ -177,7 +179,9 @@ CloudFormation page includes an IaC Workbench with:
 Requirements:
 
 - MiniStack/LocalStack running
-- Terraform CLI installed on the machine where Next.js runs
+- Terraform CLI available where Next.js runs
+  - Docker Compose mode: already included in `localstack-ui` container image
+  - Local `npm run dev` mode: install Terraform on your host machine
 - Docker running (for EC2 container simulation flows)
 
 ## Project structure

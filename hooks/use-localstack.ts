@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { LocalStackHealth } from "@/types";
+import { getHealthRefreshIntervalMs, isAutoRefreshEnabled } from "@/lib/aws/runtime-config";
 
 async function checkLocalStackHealth(): Promise<LocalStackHealth> {
   const response = await fetch("/api/health");
@@ -10,10 +11,11 @@ async function checkLocalStackHealth(): Promise<LocalStackHealth> {
 }
 
 export function useLocalStackHealth() {
+  const autoRefresh = isAutoRefreshEnabled();
   return useQuery({
     queryKey: ["localstack-health"],
     queryFn: checkLocalStackHealth,
-    refetchInterval: Number(process.env.NEXT_PUBLIC_REFRESH_INTERVAL) || 5000,
+    refetchInterval: autoRefresh ? getHealthRefreshIntervalMs() : false,
     retry: 1,
   });
 }

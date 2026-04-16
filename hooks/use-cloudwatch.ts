@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getHealthRefreshIntervalMs, isAutoRefreshEnabled } from "@/lib/aws/runtime-config";
 import type {
   CloudWatchLogGroup,
   CloudWatchLogStream,
@@ -10,6 +11,9 @@ import type {
   MetricDataQuery,
   MetricDataResult,
 } from "@/types";
+
+const AUTO_REFRESH = isAutoRefreshEnabled();
+const BASE_REFRESH_MS = getHealthRefreshIntervalMs();
 
 // Log Groups hooks
 export function useCloudWatchLogGroups(prefix?: string) {
@@ -252,7 +256,8 @@ export function useCloudWatchLogEvents(
       return data.events as CloudWatchLogEvent[];
     },
     enabled: enabled && !!logGroupName && !!logStreamName,
-    refetchInterval: options?.startFromHead === false ? 5000 : false, // Auto-refresh for tail mode
+    refetchInterval:
+      AUTO_REFRESH && options?.startFromHead === false ? BASE_REFRESH_MS : false,
   });
 }
 

@@ -184,6 +184,46 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={`bold-${index}`} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return (
+        <em key={`italic-${index}`} className="italic">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+
+    return <span key={`text-${index}`}>{part}</span>;
+  });
+}
+
+function renderMarkdownMessage(content: string) {
+  const lines = content.replace(/\r/g, "").split("\n");
+
+  return (
+    <div className="space-y-1">
+      {lines.map((line, index) =>
+        line.trim().length === 0 ? (
+          <div key={`line-${index}`} className="h-4" />
+        ) : (
+          <p key={`line-${index}`}>{renderInlineMarkdown(line)}</p>
+        ),
+      )}
+    </div>
+  );
+}
+
 function isStudySourceReference(item: unknown): item is StudySourceReference {
   if (!item || typeof item !== "object") return false;
   const candidate = item as Partial<StudySourceReference>;
@@ -987,7 +1027,7 @@ export default function StudyPage() {
                             : "bg-muted text-foreground",
                         )}
                       >
-                        {message.content}
+                        {renderMarkdownMessage(message.content)}
                       </div>
                     </div>
                   ))}

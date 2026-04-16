@@ -4,6 +4,10 @@ import {
   CloudFormationResource,
   CloudFormationEvent,
 } from "@/types";
+import { getHealthRefreshIntervalMs, isAutoRefreshEnabled } from "@/lib/aws/runtime-config";
+
+const AUTO_REFRESH = isAutoRefreshEnabled();
+const BASE_REFRESH_MS = getHealthRefreshIntervalMs();
 
 // Stack hooks
 export function useStacks() {
@@ -14,7 +18,7 @@ export function useStacks() {
       if (!response.ok) throw new Error("Failed to fetch stacks");
       return response.json();
     },
-    refetchInterval: 5000, // Refetch every 5 seconds to track stack status
+    refetchInterval: AUTO_REFRESH ? BASE_REFRESH_MS : false,
   });
 }
 
@@ -29,7 +33,7 @@ export function useStack(stackName: string, enabled?: boolean) {
       return response.json();
     },
     enabled: enabled !== false && !!stackName,
-    refetchInterval: 5000,
+    refetchInterval: AUTO_REFRESH ? BASE_REFRESH_MS : false,
   });
 }
 
@@ -163,7 +167,7 @@ export function useStackResources(stackName: string, enabled?: boolean) {
       return response.json();
     },
     enabled: enabled !== false && !!stackName,
-    refetchInterval: 5000,
+    refetchInterval: AUTO_REFRESH ? BASE_REFRESH_MS : false,
   });
 }
 
@@ -200,6 +204,6 @@ export function useStackEvents(stackName: string, enabled?: boolean) {
       return response.json();
     },
     enabled: enabled !== false && !!stackName,
-    refetchInterval: 3000, // Refetch more frequently for events
+    refetchInterval: AUTO_REFRESH ? Math.max(2000, Math.floor(BASE_REFRESH_MS * 0.6)) : false,
   });
 }
