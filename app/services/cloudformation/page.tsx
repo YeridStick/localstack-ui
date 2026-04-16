@@ -97,7 +97,9 @@ export default function CloudFormationPage() {
           AWS CloudFormation lets you model, provision, and manage AWS and
           third-party resources by treating infrastructure as code. Create
           templates that describe your AWS resources and CloudFormation takes
-          care of provisioning and configuring those resources for you.
+          care of provisioning and configuring those resources for you. For
+          local labs, combine CloudFormation networking/IAM with EKS Lab
+          runtime simulation to approximate real AWS behavior.
         </AlertDescription>
       </Alert>
 

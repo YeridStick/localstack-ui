@@ -135,11 +135,13 @@ provider "aws" {
 
   endpoints {
     apigateway     = "${endpoint}"
+    autoscaling    = "${endpoint}"
     cloudformation = "${endpoint}"
     cloudwatch     = "${endpoint}"
     dynamodb       = "${endpoint}"
     ec2            = "${endpoint}"
     elb            = "${endpoint}"
+    eks            = "${endpoint}"
     iam            = "${endpoint}"
     lambda         = "${endpoint}"
     rds            = "${endpoint}"

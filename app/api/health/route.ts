@@ -27,6 +27,7 @@ import { ListEventBusesCommand } from "@aws-sdk/client-eventbridge";
 import { ListScheduleGroupsCommand } from "@aws-sdk/client-scheduler";
 import { ListStacksCommand } from "@aws-sdk/client-cloudformation";
 import { GetRestApisCommand } from "@aws-sdk/client-api-gateway";
+import { listLocalEksClusters } from "@/lib/eks/local-eks";
 
 async function checkServiceHealth(service: Service): Promise<Service> {
   try {
@@ -81,6 +82,10 @@ async function checkServiceHealth(service: Service): Promise<Service> {
 
       case "apigateway":
         await apiGatewayClient.send(new GetRestApisCommand({}));
+        return { ...service, status: "running" };
+
+      case "eks":
+        await listLocalEksClusters();
         return { ...service, status: "running" };
 
       default:

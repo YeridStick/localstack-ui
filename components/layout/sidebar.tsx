@@ -57,7 +57,7 @@ const SERVICE_GROUPS: Array<{
 }> = [
   {
     label: "Compute",
-    ids: ["ec2", "lambda", "ecs", "elbv2"],
+    ids: ["ec2", "eks", "lambda", "ecs", "elbv2"],
   },
   {
     label: "Storage",

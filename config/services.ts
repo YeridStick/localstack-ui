@@ -122,6 +122,16 @@ export const AVAILABLE_SERVICES: Service[] = [
     href: "/services/ec2",
   },
   {
+    id: "eks",
+    name: "eks",
+    displayName: "EKS",
+    icon: "Container",
+    status: "unknown",
+    description: "Elastic Kubernetes Service - Local k3s simulation",
+    enabled: true,
+    href: "/services/eks",
+  },
+  {
     id: "rds",
     name: "rds",
     displayName: "RDS",

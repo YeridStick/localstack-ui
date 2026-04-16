@@ -739,6 +739,62 @@ export interface ApiMethodSetting {
     | "SUCCEED_WITHOUT_RESPONSE_HEADER";
 }
 
+// EKS Local Simulation Types
+export interface EksLocalNode {
+  nodeId: string;
+  index: number;
+  instanceId: string;
+  containerId: string;
+  containerName: string;
+  hostNodePort: number;
+  status: "running" | "stopped" | "error" | "terminated";
+  createdAt: string;
+}
+
+export interface EksLocalSampleApp {
+  namespace: string;
+  appName: string;
+  serviceName: string;
+  image: string;
+  nodePort: number;
+  deployedAt: string;
+}
+
+export interface EksLocalApiGatewayExposure {
+  restApiId: string;
+  stageName: string;
+  pathPart: string;
+  invokeUrl: string;
+  emulatorInvokeUrl?: string;
+  backendUrl: string;
+  createdAt: string;
+}
+
+export interface EksLocalCluster {
+  clusterId: string;
+  name: string;
+  kubernetesVersion: string;
+  networkName: string;
+  controlPlane: {
+    containerId: string;
+    containerName: string;
+    apiServerHostPort: number;
+    status: "running" | "stopped" | "error" | "terminated";
+  };
+  nodeGroup: {
+    nodeImage: string;
+    minNodes: number;
+    maxNodes: number;
+    desiredNodes: number;
+    targetCpuUtilization: number;
+  };
+  nodes: EksLocalNode[];
+  sampleApp?: EksLocalSampleApp;
+  apiGateway?: EksLocalApiGatewayExposure;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 // EC2 Types
 export interface EC2Instance {

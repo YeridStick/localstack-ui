@@ -184,6 +184,32 @@ Requirements:
   - Local `npm run dev` mode: install Terraform on your host machine
 - Docker running (for EC2 container simulation flows)
 
+## EKS Lab (local k3s + EC2 + autoscaling + API Gateway)
+
+The app includes an **EKS Lab** section (`/services/eks`) that simulates:
+
+- Kubernetes control plane using `k3s`
+- Worker nodes as EC2-emulated Docker containers
+- Manual and policy-driven autoscaling (`target CPU`)
+- Sample app deployment (NodePort)
+- API Gateway proxy exposure to the sample app
+
+Main API routes:
+
+- `GET /api/eks/clusters`
+- `POST /api/eks/clusters`
+- `PATCH /api/eks/clusters/:clusterId` with actions:
+  - `scale`
+  - `reconcile-autoscaling`
+  - `deploy-sample-app`
+  - `expose-api-gateway`
+- `DELETE /api/eks/clusters/:clusterId`
+
+Notes:
+
+- This is a learning/runtime simulation, not full AWS EKS parity.
+- Docker Compose mode mounts `/var/run/docker.sock` in the UI container to orchestrate node containers.
+
 ## Project structure
 
 Current structure is monolithic by design, but modular:
