@@ -15,11 +15,14 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-RUN npm ci
+RUN apt-get update && apt-get install -y git
 
-COPY . .
-RUN ls -la && ls -la app/ 2>/dev/null || echo "app dir not found"
+# Clone the repository to get all files
+RUN git clone https://github.com/YeridStick/localstack-ui.git /tmp/repo && \
+    cp -r /tmp/repo/* /app/ && \
+    rm -rf /tmp/repo
+
+RUN npm ci
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner
