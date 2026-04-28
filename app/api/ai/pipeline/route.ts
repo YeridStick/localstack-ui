@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { designPipeline, generateCodePipelineTemplate, type PipelineConfig } from '@/lib/ai/pipelineService';
-import { currentSettings } from '@/app/api/ai/settings/route';
+import { currentSettings } from '@/lib/ai/aiSettings';
 
 export async function POST(request: NextRequest) {
   try {
