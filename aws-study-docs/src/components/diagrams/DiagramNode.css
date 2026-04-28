@@ -1,0 +1,76 @@
+.diagram-node {
+  width: min(640px, 96%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  padding: 14px 18px;
+  text-align: center;
+  font-weight: 600;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-node:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+.diagram-node small {
+  display: block;
+  font-weight: 400;
+  opacity: 0.95;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.node-content strong {
+  font-size: 1rem;
+}
+
+.node-children {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Node Types */
+.node-aws {
+  background: linear-gradient(160deg, rgba(47, 128, 237, 0.75) 0%, rgba(47, 128, 237, 0.35) 100%);
+}
+
+.node-network {
+  background: linear-gradient(160deg, rgba(39, 174, 96, 0.75) 0%, rgba(39, 174, 96, 0.35) 100%);
+}
+
+.node-k8s {
+  background: linear-gradient(160deg, rgba(142, 68, 173, 0.75) 0%, rgba(142, 68, 173, 0.35) 100%);
+}
+
+.node-lb {
+  background: linear-gradient(160deg, rgba(242, 153, 74, 0.75) 0%, rgba(242, 153, 74, 0.35) 100%);
+}
+
+.node-security {
+  background: linear-gradient(160deg, rgba(235, 87, 87, 0.75) 0%, rgba(235, 87, 87, 0.35) 100%);
+}
+
+.node-storage {
+  background: linear-gradient(160deg, rgba(243, 156, 18, 0.75) 0%, rgba(243, 156, 18, 0.35) 100%);
+}
+
+.node-compute {
+  background: linear-gradient(160deg, rgba(52, 152, 219, 0.75) 0%, rgba(52, 152, 219, 0.35) 100%);
+}
+
+.node-database {
+  background: linear-gradient(160deg, rgba(155, 89, 182, 0.75) 0%, rgba(155, 89, 182, 0.35) 100%);
+}
+
+.node-serverless {
+  background: linear-gradient(160deg, rgba(230, 126, 34, 0.75) 0%, rgba(230, 126, 34, 0.35) 100%);
+}
+
+.node-messaging {
+  background: linear-gradient(160deg, rgba(26, 188, 156, 0.75) 0%, rgba(26, 188, 156, 0.35) 100%);
+}

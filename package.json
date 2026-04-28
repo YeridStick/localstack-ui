@@ -8,9 +8,13 @@
     "start": "next start -p 4563",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "compose:up": "docker compose up --build",
-    "compose:down": "docker compose down",
-    "compose:logs": "docker compose logs -f"
+    "compose:runtime:cleanup": "docker rm -f localstack-ui-runtime-ministack localstack-ui-runtime-localstack || echo runtime-cleanup-skipped",
+    "compose:up": "npm run compose:runtime:cleanup && docker compose up --build",
+    "compose:down": "docker compose down && npm run compose:runtime:cleanup",
+    "compose:logs": "docker compose logs -f",
+    "compose:ecr-real:up": "npm run compose:runtime:cleanup && docker compose down --remove-orphans && docker compose -f docker-compose.ecr-real.yml --env-file ecr-real.env up --build -d --remove-orphans",
+    "compose:ecr-real:down": "docker compose -f docker-compose.ecr-real.yml down --remove-orphans && npm run compose:runtime:cleanup",
+    "compose:ecr-real:logs": "docker compose -f docker-compose.ecr-real.yml logs -f"
   },
   "dependencies": {
     "@aws-sdk/client-api-gateway": "^3.856.0",
@@ -20,6 +24,7 @@
     "@aws-sdk/client-cognito-identity-provider": "^3.1026.0",
     "@aws-sdk/client-dynamodb": "^3.856.0",
     "@aws-sdk/client-ec2": "^3.1027.0",
+    "@aws-sdk/client-ecr": "^3.1031.0",
     "@aws-sdk/client-ecs": "^3.1026.0",
     "@aws-sdk/client-efs": "^3.1026.0",
     "@aws-sdk/client-elastic-load-balancing-v2": "^3.1026.0",

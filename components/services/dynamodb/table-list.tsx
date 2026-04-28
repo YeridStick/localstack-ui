@@ -90,9 +90,14 @@ export function TableList({ onSelectTable, selectedTable }: TableListProps) {
       <div className="text-center py-12">
         <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold">No tables found</h3>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-4">
           Create your first DynamoDB table to get started.
         </p>
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Table
+        </Button>
+        <CreateTableDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
     );
   }

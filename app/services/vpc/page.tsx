@@ -7,6 +7,7 @@ import { SecurityGroupList } from "@/components/services/vpc/security-group-list
 import { CreateVPCDialog } from "@/components/services/vpc/create-vpc-dialog";
 import { CreateSubnetDialog } from "@/components/services/vpc/create-subnet-dialog";
 import { CreateSecurityGroupDialog } from "@/components/services/vpc/create-security-group-dialog";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -130,6 +131,43 @@ export default function VPCPage() {
         <CreateVPCDialog open={createVPCOpen} onOpenChange={setCreateVPCOpen} />
         <CreateSubnetDialog open={createSubnetOpen} onOpenChange={setCreateSubnetOpen} />
         <CreateSecurityGroupDialog open={createSGOpen} onOpenChange={setCreateSGOpen} />
+
+        <CliCommandsPanel
+          title="Comandos AWS CLI - VPC"
+          description="Ejemplos de comandos para gestionar VPCs, subnets y security groups"
+          commands={[
+            {
+              label: "Listar VPCs",
+              command: "aws ec2 describe-vpcs --endpoint-url http://localhost:4566",
+              description: "Muestra todas las VPCs"
+            },
+            {
+              label: "Crear VPC",
+              command: "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --endpoint-url http://localhost:4566",
+              description: "Crea una nueva VPC con rango CIDR 10.0.0.0/16"
+            },
+            {
+              label: "Listar subnets",
+              command: "aws ec2 describe-subnets --endpoint-url http://localhost:4566",
+              description: "Muestra todas las subnets"
+            },
+            {
+              label: "Crear subnet",
+              command: "aws ec2 create-subnet --vpc-id <VPC_ID> --cidr-block 10.0.1.0/24 --endpoint-url http://localhost:4566",
+              description: "Crea una subnet en una VPC (reemplaza <VPC_ID>)"
+            },
+            {
+              label: "Listar Security Groups",
+              command: "aws ec2 describe-security-groups --endpoint-url http://localhost:4566",
+              description: "Muestra todos los security groups"
+            },
+            {
+              label: "Crear Internet Gateway",
+              command: "aws ec2 create-internet-gateway --endpoint-url http://localhost:4566",
+              description: "Crea un Internet Gateway para acceso público"
+            }
+          ]}
+        />
       </div>
     </MainLayout>
   );

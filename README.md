@@ -35,12 +35,52 @@ Stop:
 docker compose down
 ```
 
+### Real ECR mode (docker push compatible)
+
+For realistic ECR registry push/pull (registry endpoint strategy), run the dedicated
+compose file with LocalStack authenticated mode:
+
+```bash
+cp ecr-real.env.example ecr-real.env
+# edit ecr-real.env and set LOCALSTACK_AUTH_TOKEN
+# Optional: ECR_ENDPOINT_STRATEGY=off (recommended on Docker Desktop/Windows)
+npm run compose:ecr-real:up
+```
+
+This mode is intended for end-to-end ECR image push simulation.
+
+You can also switch modes directly in the UI:
+
+- Go to `/services/ecr`
+- In `Runtime ECR`, paste token and click `Activar ECR real`
+- To go back, click `Volver a modo base`
+- If Docker Compose is not available inside the app runtime, UI switch uses `docker run/rm` fallback automatically.
+
+PowerShell:
+
+```powershell
+Copy-Item ecr-real.env.example ecr-real.env
+# edit ecr-real.env and set LOCALSTACK_AUTH_TOKEN
+# Optional: ECR_ENDPOINT_STRATEGY=off (recommended on Docker Desktop/Windows)
+npm run compose:ecr-real:up
+```
+
 ## Quick start (manual)
 
-1. Run MiniStack:
+1. Run MiniStack (default mode):
 
 ```bash
 docker run -d --name ministack -p 4566:4566 ministackorg/ministack
+```
+
+Optional (real ECR mode with push/pull):
+
+```bash
+docker run -d --name localstack -p 4566:4566 \
+  -e LOCALSTACK_AUTH_TOKEN=<your-free-localstack-token> \
+  -e SERVICES=ecr,sts \
+  -e ECR_ENDPOINT_STRATEGY=domain \
+  localstack/localstack:latest
 ```
 
 2. Install and run UI:
@@ -157,7 +197,19 @@ npm run lint
 npm run compose:up
 npm run compose:down
 npm run compose:logs
+npm run compose:runtime:cleanup
+npm run compose:ecr-real:up
+npm run compose:ecr-real:down
+npm run compose:ecr-real:logs
 ```
+
+`compose:ecr-real:up` does:
+
+- `docker rm -f localstack-ui-runtime-ministack localstack-ui-runtime-localstack` (cleanup fallback runtime containers)
+- `docker compose down --remove-orphans` (stops base MiniStack mode first)
+- `docker compose -f docker-compose.ecr-real.yml --env-file ecr-real.env up --build -d --remove-orphans`
+
+`compose:up` also runs runtime cleanup first to avoid `:4566` conflicts after UI-based runtime switches.
 
 ## Health and connectivity
 
@@ -210,6 +262,29 @@ Notes:
 - This is a learning/runtime simulation, not full AWS EKS parity.
 - Docker Compose mode mounts `/var/run/docker.sock` in the UI container to orchestrate node containers.
 
+## ECR (real local push flow)
+
+The app includes an **ECR** section (`/services/ecr`) to:
+
+- Create/delete repositories
+- Inspect repository settings (tag mutability, scan on push, encryption)
+- List and delete images by digest/tag
+- Generate real push commands (`docker login`, `docker tag`, `docker push`)
+
+Main API routes:
+
+- `GET/POST/DELETE /api/ecr/repositories`
+- `GET/DELETE /api/ecr/images`
+
+Notes:
+
+- ECR data is managed through the emulator endpoint (`http://localhost:4566`).
+- In default MiniStack mode, repository metadata works but Docker registry push may be limited.
+- For real local push/pull parity, use `docker-compose.ecr-real.yml` (LocalStack mode).
+- Repository URIs use `*.localhost.localstack.cloud:4566` and can be used directly with Docker CLI.
+- Recommended local strategy: `ECR_ENDPOINT_STRATEGY=off`, which exposes Docker registry on `localhost:4510`.
+- In `off` strategy, push format is `localhost:4510/<repository>:<tag>`.
+
 ## Project structure
 
 Current structure is monolithic by design, but modular:
@@ -236,6 +311,17 @@ Check emulator health:
 ```bash
 curl http://localhost:4566/_ministack/health
 ```
+
+If `docker login` times out for ECR:
+
+```bash
+docker info | grep -i proxy
+```
+
+If Docker daemon uses proxy, either:
+
+- add `localhost,127.0.0.1,localhost.localstack.cloud,.localhost.localstack.cloud` to Docker Desktop `No Proxy`, or
+- use `ECR_ENDPOINT_STRATEGY=off` in `ecr-real.env`.
 
 Check app health proxy:
 

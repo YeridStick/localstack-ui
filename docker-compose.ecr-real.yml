@@ -1,0 +1,81 @@
+services:
+  localstack:
+    image: ministackorg/ministack:latest
+    privileged: true
+    ports:
+      - "4566:4566"
+      - "4510:4510"
+    environment:
+      # MiniStack no requiere auth token
+      SERVICES: ecr,ecs,ec2,sts,iam,s3,cloudformation,apigateway,lambda,logs,cloudwatch,events,sqs,secretsmanager,dynamodb,rds
+      ECR_ENDPOINT_STRATEGY: port
+      # Habilitar contenedores reales para EC2
+      EC2_VM_PROVIDER: docker
+    volumes:
+      - ministack-data:/var/lib/ministack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      default:
+        aliases:
+          - ministack
+    restart: unless-stopped
+
+  localstack-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - localstack
+    environment:
+      AWS_ENDPOINT_URL: http://ministack:4566
+      NEXT_PUBLIC_LOCALSTACK_ENDPOINT: http://localhost:4566
+      AWS_REGION: us-east-1
+      NEXT_PUBLIC_AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      NEXT_PUBLIC_AUTO_REFRESH: "false"
+      NEXT_PUBLIC_REFRESH_INTERVAL: 5000
+      # ============================================
+      # CONFIGURACIÓN DE IA - Múltiples Proveedores
+      # ============================================
+      # Opciones: 'ollama', 'openrouter', 'groq', 'custom'
+      AI_PROVIDER: ${AI_PROVIDER:-groq}
+      AI_MODEL: ${AI_MODEL:-llama-3.1-8b-instant}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-30000}
+      
+      # Ollama (local)
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b}
+      NEXT_PUBLIC_OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4:e4b}
+      
+      # OpenRouter (API) - Modelos gratuitos
+      # Configurar en ecr-real.env: OPENROUTER_API_KEY=tu_api_key
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemma-4-31b-it:free}
+      OPENROUTER_HTTP_REFERER: http://localhost:4563
+      OPENROUTER_SITE_TITLE: LocalStack UI
+      
+      # Groq (API) - Modelos gratuitos y rápidos
+      # Configurar en ecr-real.env: GROQ_API_KEY=tu_api_key
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
+      
+      # Google AI (API) - Modelos Gemini gratuitos
+      # Configurar en ecr-real.env: GOOGLE_AI_API_KEY=tu_api_key
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY:-}
+      GOOGLE_AI_MODEL: ${GOOGLE_AI_MODEL:-gemini-2.5-flash}
+      
+      # Endpoint personalizado (OpenAI-compatible)
+      CUSTOM_AI_BASE_URL: ${CUSTOM_AI_BASE_URL:-}
+      CUSTOM_AI_API_KEY: ${CUSTOM_AI_API_KEY:-}
+      CUSTOM_AI_MODEL: ${CUSTOM_AI_MODEL:-gpt-3.5-turbo}
+      # ============================================
+    ports:
+      - "4563:4563"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  localstack-data:
+  ministack-data:

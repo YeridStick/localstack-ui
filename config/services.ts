@@ -182,6 +182,16 @@ export const AVAILABLE_SERVICES: Service[] = [
     href: "/services/ecs",
   },
   {
+    id: "ecr",
+    name: "ecr",
+    displayName: "ECR",
+    icon: "Container",
+    status: "unknown",
+    description: "Elastic Container Registry",
+    enabled: true,
+    href: "/services/ecr",
+  },
+  {
     id: "route53",
     name: "route53",
     displayName: "Route 53",

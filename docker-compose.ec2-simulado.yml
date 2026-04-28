@@ -1,0 +1,53 @@
+# Docker Compose para simular instancias EC2 usando contenedores reales
+# Cada servicio representa una "instancia EC2" con Docker dentro
+
+services:
+  # Plantilla de instancia EC2 - se puede escalar
+  ec2-instance:
+    image: docker:dind
+    privileged: true
+    environment:
+      - EC2_INSTANCE_ID=${INSTANCE_ID:-i-default}
+      - EC2_INSTANCE_TYPE=${INSTANCE_TYPE:-t2.micro}
+      - EC2_AMI=${AMI:-alpine:latest}
+    volumes:
+      - ec2-data-${INSTANCE_ID:-default}:/var/lib/docker
+    networks:
+      - ec2-network
+    labels:
+      - "ec2.simulated=true"
+      - "ec2.instance-id=${INSTANCE_ID:-i-default}"
+      - "ec2.instance-type=${INSTANCE_TYPE:-t2.micro}"
+    command: >
+      sh -c "
+        echo 'Iniciando instancia EC2 simulada: ${INSTANCE_ID:-i-default}' &&
+        echo 'AMI: ${AMI:-alpine:latest}' &&
+        echo 'Tipo: ${INSTANCE_TYPE:-t2.micro}' &&
+        dockerd-entrypoint.sh &
+        sleep 5 &&
+        docker run -d --name app-container ${AMI:-alpine:latest} sleep infinity &&
+        tail -f /dev/null
+      "
+    restart: unless-stopped
+
+  # Proxy para exponer puertos de las instancias EC2
+  ec2-proxy:
+    image: nginx:alpine
+    ports:
+      - "2222:2222"  # SSH
+      - "8080:8080"  # HTTP
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - ec2-network
+    depends_on:
+      - ec2-instance
+    labels:
+      - "ec2.proxy=true"
+
+volumes:
+  ec2-data-default:
+
+networks:
+  ec2-network:
+    driver: bridge

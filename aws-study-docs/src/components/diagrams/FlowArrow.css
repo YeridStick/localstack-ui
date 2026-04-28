@@ -1,0 +1,30 @@
+.flow-arrow {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.arrow-line {
+  width: 3px;
+  height: 30px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.9));
+  position: relative;
+  animation: pulse 1.7s ease-in-out infinite;
+}
+
+.arrow-line::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid rgba(255, 255, 255, 0.9);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.48; transform: scaleY(0.95); }
+  50% { opacity: 1; transform: scaleY(1.05); }
+}

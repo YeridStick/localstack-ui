@@ -15,6 +15,7 @@ import {
   schedulerClient,
   cloudFormationClient,
   apiGatewayClient,
+  ecrClient,
 } from "@/lib/aws-config";
 import { ListBucketsCommand } from "@aws-sdk/client-s3";
 import { ListTablesCommand } from "@aws-sdk/client-dynamodb";
@@ -27,6 +28,7 @@ import { ListEventBusesCommand } from "@aws-sdk/client-eventbridge";
 import { ListScheduleGroupsCommand } from "@aws-sdk/client-scheduler";
 import { ListStacksCommand } from "@aws-sdk/client-cloudformation";
 import { GetRestApisCommand } from "@aws-sdk/client-api-gateway";
+import { DescribeRepositoriesCommand } from "@aws-sdk/client-ecr";
 import { listLocalEksClusters } from "@/lib/eks/local-eks";
 
 async function checkServiceHealth(service: Service): Promise<Service> {
@@ -86,6 +88,10 @@ async function checkServiceHealth(service: Service): Promise<Service> {
 
       case "eks":
         await listLocalEksClusters();
+        return { ...service, status: "running" };
+
+      case "ecr":
+        await ecrClient.send(new DescribeRepositoriesCommand({ maxResults: 1 }));
         return { ...service, status: "running" };
 
       default:

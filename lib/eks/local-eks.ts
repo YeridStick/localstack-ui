@@ -3,6 +3,8 @@ import { access, mkdir, readdir, readFile, rm, writeFile } from "fs/promises";
 import path from "path";
 import { spawn } from "child_process";
 import {
+  DescribeImagesCommand,
+  DescribeInstancesCommand,
   RunInstancesCommand,
   TerminateInstancesCommand,
 } from "@aws-sdk/client-ec2";
@@ -14,6 +16,14 @@ const DEFAULT_NODEPORT = 30080;
 
 const EKS_ROOT = path.join(process.cwd(), ".localstack-ui", "eks");
 const CLUSTER_STATE_DIR = path.join(EKS_ROOT, "clusters");
+const DEFAULT_EC2_AMI_CANDIDATES = [
+  "ami-12345678",
+  "ami-0abcdef1234567890",
+  "ami-0c55b159cbfafe1f0",
+];
+const MAX_DISCOVERED_AMIS = 10;
+
+let cachedEc2AmiId: string | null = null;
 
 type NodeStatus = "running" | "stopped" | "error" | "terminated";
 
@@ -203,6 +213,87 @@ async function ensureDockerAvailable() {
   await runDocker(["ps", "--format", "{{.ID}}"], { timeoutMs: 8_000 });
 }
 
+function uniqueNonEmpty(values: (string | undefined | null)[]): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const normalized = (value || "").trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
+function splitEnvList(value: string | undefined): string[] {
+  return uniqueNonEmpty((value || "").split(","));
+}
+
+function isImageNotFoundError(error: unknown): boolean {
+  const err = error as {
+    name?: string;
+    code?: string;
+    Code?: string;
+    message?: string;
+  };
+  const raw = `${err?.name || ""} ${err?.code || ""} ${err?.Code || ""} ${
+    err?.message || ""
+  }`.toLowerCase();
+  return (
+    raw.includes("invalidamiid") ||
+    raw.includes("invalidami") ||
+    (raw.includes("image id") && raw.includes("does not exist"))
+  );
+}
+
+async function discoverAmiIdsFromInstances(): Promise<string[]> {
+  try {
+    const response = await ec2Client.send(new DescribeInstancesCommand({}));
+    const imageIds =
+      response.Reservations?.flatMap((reservation) =>
+        (reservation.Instances || [])
+          .filter((instance) => instance.State?.Name !== "terminated")
+          .map((instance) => instance.ImageId || ""),
+      ) || [];
+    return uniqueNonEmpty(imageIds).slice(0, MAX_DISCOVERED_AMIS);
+  } catch {
+    return [];
+  }
+}
+
+async function discoverAmiIdsFromCatalog(): Promise<string[]> {
+  try {
+    const response = await ec2Client.send(new DescribeImagesCommand({}));
+    const imageIds = (response.Images || []).map((image) => image.ImageId || "");
+    return uniqueNonEmpty(imageIds).slice(0, MAX_DISCOVERED_AMIS);
+  } catch {
+    return [];
+  }
+}
+
+async function resolveAmiCandidates(): Promise<string[]> {
+  const [fromInstances, fromCatalog] = await Promise.all([
+    discoverAmiIdsFromInstances(),
+    discoverAmiIdsFromCatalog(),
+  ]);
+
+  const fromEnv = uniqueNonEmpty([
+    process.env.EKS_NODE_AMI_ID,
+    process.env.EC2_DEFAULT_AMI_ID,
+    process.env.LOCALSTACK_UI_EC2_AMI_ID,
+  ]);
+  const fromEnvList = splitEnvList(process.env.EC2_AMI_CANDIDATES);
+
+  return uniqueNonEmpty([
+    cachedEc2AmiId,
+    ...fromEnv,
+    ...fromEnvList,
+    ...fromInstances,
+    ...fromCatalog,
+    ...DEFAULT_EC2_AMI_CANDIDATES,
+  ]);
+}
+
 async function getMappedHostPort(
   containerName: string,
   containerPort: number,
@@ -246,30 +337,61 @@ async function waitForK3sToken(controlPlaneContainerName: string): Promise<strin
 }
 
 async function createEc2NodeInstanceTags(clusterName: string, index: number) {
-  const instance = await ec2Client.send(
-    new RunInstancesCommand({
-      ImageId: "ami-12345678",
-      InstanceType: "t2.micro",
-      MinCount: 1,
-      MaxCount: 1,
-      TagSpecifications: [
-        {
-          ResourceType: "instance",
-          Tags: [
-            { Key: "Name", Value: `${clusterName}-worker-${index}` },
-            { Key: "managed-by", Value: "localstack-ui" },
-            { Key: "workload", Value: "eks-node" },
-          ],
-        },
-      ],
-    }),
-  );
+  const amiCandidates = await resolveAmiCandidates();
+  let lastImageError: unknown = null;
 
-  const instanceId = instance.Instances?.[0]?.InstanceId;
-  if (!instanceId) {
-    throw new Error("No se obtuvo InstanceId al crear nodo EC2 simulado.");
+  for (const amiId of amiCandidates) {
+    try {
+      const instance = await ec2Client.send(
+        new RunInstancesCommand({
+          ImageId: amiId,
+          InstanceType: "t2.micro",
+          MinCount: 1,
+          MaxCount: 1,
+          TagSpecifications: [
+            {
+              ResourceType: "instance",
+              Tags: [
+                { Key: "Name", Value: `${clusterName}-worker-${index}` },
+                { Key: "managed-by", Value: "localstack-ui" },
+                { Key: "workload", Value: "eks-node" },
+              ],
+            },
+          ],
+        }),
+      );
+
+      const instanceId = instance.Instances?.[0]?.InstanceId;
+      if (!instanceId) {
+        throw new Error("No se obtuvo InstanceId al crear nodo EC2 simulado.");
+      }
+
+      cachedEc2AmiId = amiId;
+      return instanceId;
+    } catch (error) {
+      if (isImageNotFoundError(error)) {
+        lastImageError = error;
+        continue;
+      }
+      throw error;
+    }
   }
-  return instanceId;
+
+  const lastErrorMessage =
+    lastImageError instanceof Error
+      ? lastImageError.message
+      : String(lastImageError || "");
+
+  throw new Error(
+    [
+      "No se encontro un AMI valido para lanzar nodos EKS en este runtime.",
+      `AMIs probados: ${amiCandidates.join(", ")}`,
+      "Configura EKS_NODE_AMI_ID o EC2_DEFAULT_AMI_ID en el entorno del backend.",
+      lastErrorMessage ? `Detalle: ${lastErrorMessage}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | "),
+  );
 }
 
 async function terminateEc2Instance(instanceId: string): Promise<void> {

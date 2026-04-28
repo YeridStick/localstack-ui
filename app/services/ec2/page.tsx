@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { InstanceListDocker } from "@/components/services/ec2/instance-list-docker";
 import { CreateDockerInstanceDialog } from "@/components/services/ec2/create-docker-instance-dialog";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -33,7 +34,7 @@ export default function EC2Page() {
           </div>
           <Button
             onClick={() =>
-              queryClient.invalidateQueries({ queryKey: ["ec2-docker-instances"] })
+              queryClient.invalidateQueries({ queryKey: ["ec2-instances"] })
             }
             variant="outline"
             size="sm"
@@ -70,6 +71,43 @@ export default function EC2Page() {
             <InstanceListDocker />
           </CardContent>
         </Card>
+
+        <CliCommandsPanel
+          title="Comandos AWS CLI - EC2"
+          description="Ejemplos de comandos para gestionar instancias EC2 con MiniStack/LocalStack"
+          commands={[
+            {
+              label: "Listar instancias",
+              command: "aws ec2 describe-instances --endpoint-url http://localhost:4566",
+              description: "Muestra todas las instancias EC2 creadas"
+            },
+            {
+              label: "Crear instancia",
+              command: "aws ec2 run-instances --image-id ami-04681a1dbd79675a5 --instance-type t2.micro --count 1 --endpoint-url http://localhost:4566",
+              description: "Crea una nueva instancia EC2 (genera contenedor Docker real)"
+            },
+            {
+              label: "Ver contenedores Docker",
+              command: "docker ps --filter label=ec2_instance_id --format 'table {{.ID}}\\t{{.Names}}\\t{{.Status}}'",
+              description: "Lista los contenedores Docker que representan instancias EC2"
+            },
+            {
+              label: "Conectar a instancia",
+              command: "docker exec -it <CONTAINER_ID> /bin/bash",
+              description: "Accede al shell de la instancia EC2 (reemplaza <CONTAINER_ID>)"
+            },
+            {
+              label: "Detener instancia",
+              command: "aws ec2 stop-instances --instance-ids <INSTANCE_ID> --endpoint-url http://localhost:4566",
+              description: "Detiene una instancia EC2 (reemplaza <INSTANCE_ID>)"
+            },
+            {
+              label: "Terminar instancia",
+              command: "aws ec2 terminate-instances --instance-ids <INSTANCE_ID> --endpoint-url http://localhost:4566",
+              description: "Elimina una instancia EC2 permanentemente"
+            }
+          ]}
+        />
 
         <CreateDockerInstanceDialog
           open={createInstanceOpen}

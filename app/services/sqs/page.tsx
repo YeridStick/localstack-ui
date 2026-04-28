@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ServicePageLayout } from "@/components/layout/service-page-layout";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -135,6 +136,43 @@ export default function SQSPage() {
       <CreateQueueDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+      />
+
+      <CliCommandsPanel
+        title="Comandos AWS CLI - SQS"
+        description="Ejemplos de comandos para gestionar colas SQS"
+        commands={[
+          {
+            label: "Listar colas",
+            command: "aws sqs list-queues --endpoint-url http://localhost:4566",
+            description: "Muestra todas las colas SQS"
+          },
+          {
+            label: "Crear cola",
+            command: "aws sqs create-queue --queue-name mi-cola --endpoint-url http://localhost:4566",
+            description: "Crea una cola SQS estándar"
+          },
+          {
+            label: "Crear cola FIFO",
+            command: "aws sqs create-queue --queue-name mi-cola.fifo --attributes FifoQueue=true --endpoint-url http://localhost:4566",
+            description: "Crea una cola FIFO (First-In-First-Out)"
+          },
+          {
+            label: "Enviar mensaje",
+            command: "aws sqs send-message --queue-url http://localhost:4566/000000000000/mi-cola --message-body \"Hola Mundo\" --endpoint-url http://localhost:4566",
+            description: "Envía un mensaje a la cola"
+          },
+          {
+            label: "Recibir mensaje",
+            command: "aws sqs receive-message --queue-url http://localhost:4566/000000000000/mi-cola --endpoint-url http://localhost:4566",
+            description: "Recibe un mensaje de la cola"
+          },
+          {
+            label: "Eliminar cola",
+            command: "aws sqs delete-queue --queue-url http://localhost:4566/000000000000/mi-cola --endpoint-url http://localhost:4566",
+            description: "Elimina una cola SQS"
+          }
+        ]}
       />
     </ServicePageLayout>
   );

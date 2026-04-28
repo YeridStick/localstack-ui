@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { DBInstanceList } from "@/components/services/rds/db-instance-list";
 import { CreateDBDialog } from "@/components/services/rds/create-db-dialog";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -73,6 +74,33 @@ export default function RDSPage() {
         <CreateDBDialog
           open={createDBOpen}
           onOpenChange={setCreateDBOpen}
+        />
+
+        <CliCommandsPanel
+          title="Comandos AWS CLI - RDS"
+          description="Ejemplos de comandos para gestionar bases de datos RDS"
+          commands={[
+            {
+              label: "Listar instancias",
+              command: "aws rds describe-db-instances --endpoint-url http://localhost:4566",
+              description: "Muestra todas las instancias de base de datos"
+            },
+            {
+              label: "Crear instancia MySQL",
+              command: "aws rds create-db-instance --db-instance-identifier mi-db --db-instance-class db.t2.micro --engine mysql --master-username admin --master-user-password password123 --allocated-storage 20 --endpoint-url http://localhost:4566",
+              description: "Crea una instancia MySQL"
+            },
+            {
+              label: "Crear instancia Postgres",
+              command: "aws rds create-db-instance --db-instance-identifier mi-postgres --db-instance-class db.t2.micro --engine postgres --master-username postgres --master-user-password password123 --allocated-storage 20 --endpoint-url http://localhost:4566",
+              description: "Crea una instancia PostgreSQL"
+            },
+            {
+              label: "Eliminar instancia",
+              command: "aws rds delete-db-instance --db-instance-identifier mi-db --skip-final-snapshot --endpoint-url http://localhost:4566",
+              description: "Elimina una instancia RDS"
+            }
+          ]}
         />
       </div>
     </MainLayout>

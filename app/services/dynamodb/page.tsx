@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TableList } from "@/components/services/dynamodb/table-list";
 import { TableViewer } from "@/components/services/dynamodb/table-viewer";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -69,6 +70,43 @@ export default function DynamoDBPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        <CliCommandsPanel
+          title="Comandos AWS CLI - DynamoDB"
+          description="Ejemplos de comandos para gestionar tablas y items"
+          commands={[
+            {
+              label: "Listar tablas",
+              command: "aws dynamodb list-tables --endpoint-url http://localhost:4566",
+              description: "Muestra todas las tablas DynamoDB"
+            },
+            {
+              label: "Crear tabla",
+              command: "aws dynamodb create-table --table-name mi-tabla --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url http://localhost:4566",
+              description: "Crea una tabla con clave primaria 'id'"
+            },
+            {
+              label: "Describir tabla",
+              command: "aws dynamodb describe-table --table-name mi-tabla --endpoint-url http://localhost:4566",
+              description: "Muestra detalles de una tabla"
+            },
+            {
+              label: "Insertar item",
+              command: "aws dynamodb put-item --table-name mi-tabla --item '{\"id\":{\"S\":\"123\"},\"nombre\":{\"S\":\"Juan\"}}' --endpoint-url http://localhost:4566",
+              description: "Inserta un item en la tabla"
+            },
+            {
+              label: "Consultar items",
+              command: "aws dynamodb scan --table-name mi-tabla --endpoint-url http://localhost:4566",
+              description: "Lista todos los items de la tabla"
+            },
+            {
+              label: "Eliminar tabla",
+              command: "aws dynamodb delete-table --table-name mi-tabla --endpoint-url http://localhost:4566",
+              description: "Elimina una tabla DynamoDB"
+            }
+          ]}
+        />
       </div>
     </MainLayout>
   );

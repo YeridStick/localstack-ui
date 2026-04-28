@@ -6,6 +6,7 @@ import { BucketList } from "@/components/services/s3/bucket-list";
 import { CreateBucketDialog } from "@/components/services/s3/create-bucket-dialog";
 import { ObjectBrowser } from "@/components/services/s3/object-browser";
 import { UploadDialog } from "@/components/services/s3/upload-dialog";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -120,6 +121,43 @@ export default function S3Page() {
             currentPrefix={currentPrefix}
           />
         )}
+
+        <CliCommandsPanel
+          title="Comandos AWS CLI - S3"
+          description="Ejemplos de comandos para gestionar buckets y objetos S3 con MiniStack/LocalStack"
+          commands={[
+            {
+              label: "Listar buckets",
+              command: "aws s3 ls --endpoint-url http://localhost:4566",
+              description: "Muestra todos los buckets S3"
+            },
+            {
+              label: "Crear bucket",
+              command: "aws s3 mb s3://mi-bucket --endpoint-url http://localhost:4566",
+              description: "Crea un nuevo bucket S3"
+            },
+            {
+              label: "Listar objetos",
+              command: "aws s3 ls s3://mi-bucket --endpoint-url http://localhost:4566",
+              description: "Lista objetos en un bucket (reemplaza 'mi-bucket')"
+            },
+            {
+              label: "Subir archivo",
+              command: "aws s3 cp archivo.txt s3://mi-bucket/ --endpoint-url http://localhost:4566",
+              description: "Sube un archivo al bucket S3"
+            },
+            {
+              label: "Descargar archivo",
+              command: "aws s3 cp s3://mi-bucket/archivo.txt . --endpoint-url http://localhost:4566",
+              description: "Descarga un archivo desde S3"
+            },
+            {
+              label: "Eliminar bucket",
+              command: "aws s3 rb s3://mi-bucket --force --endpoint-url http://localhost:4566",
+              description: "Elimina un bucket S3 y todo su contenido"
+            }
+          ]}
+        />
       </div>
     </MainLayout>
   );

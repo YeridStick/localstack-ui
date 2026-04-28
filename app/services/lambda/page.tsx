@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ServicePageLayout } from "@/components/layout/service-page-layout";
 import { FunctionList } from "@/components/services/lambda/function-list";
 import { FunctionViewer } from "@/components/services/lambda/function-viewer";
+import { CliCommandsPanel } from "@/components/cli-commands-panel";
 import {
   Card,
   CardContent,
@@ -103,6 +104,33 @@ export default function LambdaPage() {
         func={selectedFunction}
         open={viewerOpen}
         onOpenChange={setViewerOpen}
+      />
+
+      <CliCommandsPanel
+        title="Comandos AWS CLI - Lambda"
+        description="Ejemplos de comandos para gestionar funciones Lambda"
+        commands={[
+          {
+            label: "Listar funciones",
+            command: "aws lambda list-functions --endpoint-url http://localhost:4566",
+            description: "Muestra todas las funciones Lambda"
+          },
+          {
+            label: "Crear función (Python)",
+            command: "aws lambda create-function --function-name mi-funcion --runtime python3.9 --handler lambda_function.handler --role arn:aws:iam::000000000000:role/lambda-role --zip-file fileb://function.zip --endpoint-url http://localhost:4566",
+            description: "Crea una función Lambda con runtime Python"
+          },
+          {
+            label: "Invocar función",
+            command: "aws lambda invoke --function-name mi-funcion --payload '{\"key\":\"value\"}' output.txt --endpoint-url http://localhost:4566",
+            description: "Invoca una función Lambda con payload JSON"
+          },
+          {
+            label: "Eliminar función",
+            command: "aws lambda delete-function --function-name mi-funcion --endpoint-url http://localhost:4566",
+            description: "Elimina una función Lambda"
+          }
+        ]}
       />
     </ServicePageLayout>
   );

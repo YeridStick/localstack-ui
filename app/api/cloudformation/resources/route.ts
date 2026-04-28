@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cloudFormationClient } from "@/lib/aws-config";
+import { syncHybridEc2ContainersForStack } from "@/lib/cloudformation/hybrid-ec2-sync";
 import {
   ListStackResourcesCommand,
   DescribeStackResourcesCommand,
@@ -15,6 +16,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "Stack name is required" },
         { status: 400 },
+      );
+    }
+
+    try {
+      await syncHybridEc2ContainersForStack(stackName);
+    } catch (syncError) {
+      console.warn(
+        `No se pudo reconciliar EC2 hibrida para stack '${stackName}'`,
+        syncError,
       );
     }
 

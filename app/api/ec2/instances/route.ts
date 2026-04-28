@@ -57,22 +57,43 @@ const execDocker = (
 const resolveDockerImage = (
   image: string | undefined,
   imageId: string | undefined
-): string => {
-  // If the caller already sent a Docker image, trust it.
+): { dockerImage: string; amiId: string } => {
+  // Map Docker images to valid AMI IDs that MiniStack accepts
+  const dockerToAmiMap: Record<string, string> = {
+    "alpine:latest": "ami-alpine",
+    "ubuntu:22.04": "ami-ubuntu",
+    "ubuntu:20.04": "ami-ubuntu-20",
+    "debian:bookworm": "ami-debian",
+    "nginx:latest": "ami-nginx",
+    "nginx:alpine": "ami-nginx",
+    "httpd:latest": "ami-apache",
+    "redis:latest": "ami-redis",
+    "mysql:8.0": "ami-mysql",
+    "postgres:15": "ami-postgres",
+    "node:18": "ami-nodejs",
+    "python:3.11": "ami-python",
+    "openjdk:17": "ami-java",
+    "centos:stream9": "ami-centos",
+  };
+
+  // If the caller sent a Docker image directly (e.g., "ubuntu:22.04")
   if (image && image.includes(":")) {
-    return image;
+    const amiId = dockerToAmiMap[image] || "ami-custom";
+    return { dockerImage: image, amiId };
   }
 
-  // Map known AMI-like IDs to Docker images for simulation.
-  const imageMap: Record<string, string> = {
-    "ami-12345678": "alpine:latest",
-    "ami-87654321": "ubuntu:20.04",
-    "ami-abcd1234": "mcr.microsoft.com/windows/nanoserver:ltsc2022",
-    "ami-ubuntu": "ubuntu:22.04",
-    "ami-nginx": "nginx:alpine",
-  };
-  const requestedId = imageId || "ami-12345678";
-  return imageMap[requestedId] || "alpine:latest";
+  // If imageId is provided
+  if (imageId) {
+    // Reverse lookup: find Docker image for this AMI
+    const entry = Object.entries(dockerToAmiMap).find(([_, ami]) => ami === imageId);
+    if (entry) {
+      return { dockerImage: entry[0], amiId: imageId };
+    }
+    return { dockerImage: "alpine:latest", amiId: imageId };
+  }
+
+  // Default fallback
+  return { dockerImage: "alpine:latest", amiId: "ami-alpine" };
 };
 
 const canUseDocker = async (): Promise<boolean> => {
@@ -209,12 +230,11 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
-    const dockerImage = resolveDockerImage(image, imageId);
-    const resolvedImageId = imageId || "ami-12345678";
+    const { dockerImage, amiId } = resolveDockerImage(image, imageId);
 
     // 1. Create EC2 instance in miniStack for AWS API compatibility
     const awsCommand = new RunInstancesCommand({
-      ImageId: resolvedImageId,
+      ImageId: amiId,
       InstanceType: instanceType || "t2.micro",
       MinCount: 1,
       MaxCount: 1,
@@ -451,7 +471,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: `Instance ${action}ed successfully`
     });
@@ -467,4 +487,9 @@ export async function PATCH(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// PUT - Alias for PATCH (compatibility with use-ec2-docker hook)
+export async function PUT(request: Request) {
+  return PATCH(request);
 }

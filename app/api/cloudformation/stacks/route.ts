@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cloudFormationClient } from "@/lib/aws-config";
 import {
+  cleanupHybridEc2ContainersForStack,
+  scheduleHybridEc2SyncForStack,
+} from "@/lib/cloudformation/hybrid-ec2-sync";
+import {
   ListStacksCommand,
   CreateStackCommand,
   DeleteStackCommand,
@@ -98,9 +102,11 @@ export async function POST(request: NextRequest) {
     });
 
     const response = await cloudFormationClient.send(command);
+    scheduleHybridEc2SyncForStack(stackName);
 
     return NextResponse.json({
       stackId: response.StackId,
+      hybridEc2SyncScheduled: true,
     });
   } catch (error: any) {
     console.error("Error creating stack:", error);
@@ -170,9 +176,11 @@ export async function PUT(request: NextRequest) {
     });
 
     const response = await cloudFormationClient.send(command);
+    scheduleHybridEc2SyncForStack(stackName);
 
     return NextResponse.json({
       stackId: response.StackId,
+      hybridEc2SyncScheduled: true,
     });
   } catch (error: any) {
     console.error("Error updating stack:", error);
@@ -205,9 +213,14 @@ export async function DELETE(request: NextRequest) {
       ClientRequestToken: clientRequestToken || undefined,
     });
 
+    const cleanupSummary = await cleanupHybridEc2ContainersForStack(stackName);
     await cloudFormationClient.send(command);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      hybridEc2ContainersRemoved: cleanupSummary.removedContainers,
+      hybridEc2CleanupErrors: cleanupSummary.errors,
+    });
   } catch (error: any) {
     console.error("Error deleting stack:", error);
     return NextResponse.json(

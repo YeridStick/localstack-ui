@@ -19,6 +19,35 @@ export interface LocalStackHealth {
   services: Service[];
 }
 
+export interface EcrRepository {
+  repositoryArn?: string;
+  registryId?: string;
+  repositoryName: string;
+  repositoryUri?: string;
+  pushUri?: string;
+  loginServer?: string;
+  createdAt?: Date;
+  imageTagMutability?:
+    | "MUTABLE"
+    | "IMMUTABLE"
+    | "IMMUTABLE_WITH_EXCLUSION"
+    | "MUTABLE_WITH_EXCLUSION";
+  scanOnPush?: boolean;
+  encryptionType?: "AES256" | "KMS" | "KMS_DSSE";
+  kmsKey?: string;
+}
+
+export interface EcrImage {
+  repositoryName: string;
+  registryId?: string;
+  imageDigest?: string;
+  imageTags?: string[];
+  imageSizeInBytes?: number;
+  imagePushedAt?: Date;
+  imageManifestMediaType?: string;
+  artifactMediaType?: string;
+}
+
 export interface S3Bucket {
   name: string;
   creationDate: Date;

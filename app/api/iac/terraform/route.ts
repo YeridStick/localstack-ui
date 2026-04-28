@@ -140,6 +140,7 @@ provider "aws" {
     cloudwatch     = "${endpoint}"
     dynamodb       = "${endpoint}"
     ec2            = "${endpoint}"
+    ecr            = "${endpoint}"
     elb            = "${endpoint}"
     eks            = "${endpoint}"
     iam            = "${endpoint}"

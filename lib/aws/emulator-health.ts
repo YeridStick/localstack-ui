@@ -9,16 +9,25 @@ export interface EmulatorHealthCheck {
 }
 
 const HEALTH_PATHS = ["/_ministack/health", "/_localstack/health"];
+const HEALTH_REQUEST_TIMEOUT_MS = 2_500;
 
 export async function checkAwsEmulatorHealth(): Promise<EmulatorHealthCheck> {
   const { endpoint } = getAwsRuntimeConfig();
 
   for (const healthPath of HEALTH_PATHS) {
     try {
-      const response = await fetch(`${endpoint}${healthPath}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), HEALTH_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch(`${endpoint}${healthPath}`, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
 
       if (!response.ok) {
         continue;

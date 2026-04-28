@@ -19,6 +19,7 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { Route53Client } from "@aws-sdk/client-route-53";
 import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
 import { EFSClient } from "@aws-sdk/client-efs";
+import { ECRClient } from "@aws-sdk/client-ecr";
 import { getAwsRuntimeConfig } from "@/lib/aws/runtime-config";
 
 const runtime = getAwsRuntimeConfig();
@@ -51,3 +52,4 @@ export const ecsClient = new ECSClient(config);
 export const route53Client = new Route53Client(config);
 export const cognitoClient = new CognitoIdentityProviderClient(config);
 export const efsClient = new EFSClient(config);
+export const ecrClient = new ECRClient(config);
