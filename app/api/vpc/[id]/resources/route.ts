@@ -22,10 +22,10 @@ const execDocker = (args: string[]): Promise<string> => {
 // GET /api/vpc/[id]/resources - Get EC2 and RDS instances attached to this VPC
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const vpcId = params.id;
+    const { id: vpcId } = await params;
 
     // 1. Get Docker network name for this VPC
     const networkName = `vpc-${vpcId}`;
