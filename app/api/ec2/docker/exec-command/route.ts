@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Container ID and command required" }, { status: 400 });
   }
 
-  return new Promise((resolve) => {
+  return new Promise<NextResponse>((resolve) => {
     const args = ["exec", containerId, "sh", "-c", command];
     const process = spawn("docker", args, {
       stdio: ["pipe", "pipe", "pipe"],
