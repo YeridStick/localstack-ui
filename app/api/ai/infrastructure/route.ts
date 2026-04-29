@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeInfrastructure, type InfrastructureDiagram } from '@/lib/ai/infraDesignerService';
+import { analyzeInfrastructure, type Diagram } from '@/lib/ai/infraDesignerService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
       success: true,
       analysis: result.analysis,
       diagram: result.diagram,
-      recommendations: result.recommendations
     });
   } catch (error) {
     console.error('[API Infrastructure] Error:', error);
