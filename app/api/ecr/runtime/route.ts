@@ -319,12 +319,15 @@ async function startLocalstackFallback(
   );
 }
 
-async function detectBackendFromDocker(): Promise<"ministack" | "localstack" | "unknown"> {
+async function detectBackendFromDocker(): Promise<"floci" | "ministack" | "localstack" | "unknown"> {
   const result = await runDocker(["ps", "--format", "{{.Image}}"], {
     timeoutMs: 10_000,
     acceptExitCodes: [0, 1],
   });
   const images = splitLines(result.stdout);
+  if (images.some((image) => image.includes("floci/floci"))) {
+    return "floci";
+  }
   if (images.some((image) => image.includes("localstack/localstack"))) {
     return "localstack";
   }
@@ -335,7 +338,7 @@ async function detectBackendFromDocker(): Promise<"ministack" | "localstack" | "
 }
 
 async function resolveBackendFast(dockerReady: boolean): Promise<{
-  backend: "ministack" | "localstack" | "unknown";
+  backend: "floci" | "ministack" | "localstack" | "unknown";
   endpoint: string;
   healthPath: string | null;
 }> {
