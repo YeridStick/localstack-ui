@@ -10,10 +10,7 @@ import {
   Shield, 
   Menu,
   X,
-  ChevronRight,
-  Sparkles,
-  Bot,
-  GitBranch
+  ChevronRight
 } from 'lucide-react'
 import { useState } from 'react'
 import './Sidebar.css'
@@ -29,10 +26,6 @@ const menuItems = [
   { path: '/security', icon: Shield, label: 'Seguridad' },
 ]
 
-const aiMenuItems = [
-  { path: '/ai/infrastructure', icon: Bot, label: 'IA: Infra Designer' },
-  { path: '/ai/pipeline', icon: GitBranch, label: 'IA: Pipeline Designer' },
-]
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -70,21 +63,6 @@ export function Sidebar() {
             </NavLink>
           ))}
           
-          <div className="sidebar-divider" />
-          <div className="sidebar-section-title">Asistentes IA</div>
-          
-          {aiMenuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `nav-link ai-link ${isActive ? 'active' : ''}`}
-              onClick={() => setIsOpen(false)}
-            >
-              <item.icon size={20} />
-              <span>{item.label}</span>
-              <ChevronRight size={16} className="nav-arrow" />
-            </NavLink>
-          ))}
         </nav>
 
         <div className="sidebar-footer">

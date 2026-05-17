@@ -15,14 +15,12 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y git
-
-# Clone the repository to get all files
-RUN git clone https://github.com/YeridStick/localstack-ui.git /tmp/repo && \
-    cp -r /tmp/repo/* /app/ && \
-    rm -rf /tmp/repo
-
+# Copy local project files
+COPY package*.json ./
 RUN npm ci
+
+# Copy rest of the application
+COPY . .
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner

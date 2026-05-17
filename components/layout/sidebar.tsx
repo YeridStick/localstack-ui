@@ -27,9 +27,6 @@ import {
   Users,
   Folder,
   Boxes,
-  Bot,
-  GitBranch,
-  Settings,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -101,7 +98,7 @@ export function Sidebar({ className }: SidebarProps) {
             </div>
             <div>
               <h2 className="text-sm font-semibold leading-none">AWS Local Console</h2>
-              <p className="mt-1 text-[11px] text-slate-400">MiniStack / LocalStack</p>
+              <p className="mt-1 text-[11px] text-slate-400">Floci / MiniStack / LocalStack</p>
             </div>
           </div>
         </div>
@@ -146,48 +143,6 @@ export function Sidebar({ className }: SidebarProps) {
             >
               <BookOpenCheck className="h-4 w-4" />
               <span>Study Lab</span>
-            </div>
-          </Link>
-
-          <Link href="/services/study/infrastructure">
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                pathname === "/services/study/infrastructure"
-                  ? "bg-purple-500/20 text-purple-200"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              <span>IA: Infra Designer</span>
-            </div>
-          </Link>
-
-          <Link href="/services/study/pipeline">
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                pathname === "/services/study/pipeline"
-                  ? "bg-purple-500/20 text-purple-200"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
-              )}
-            >
-              <GitBranch className="h-4 w-4" />
-              <span>IA: Pipeline Designer</span>
-            </div>
-          </Link>
-
-          <Link href="/services/ai-settings">
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                pathname === "/services/ai-settings"
-                  ? "bg-green-500/20 text-green-200"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-100",
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              <span>Configuración IA</span>
             </div>
           </Link>
 

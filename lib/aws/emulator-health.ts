@@ -2,13 +2,13 @@ import { getAwsRuntimeConfig } from "./runtime-config";
 
 export interface EmulatorHealthCheck {
   isReachable: boolean;
-  backend: "ministack" | "localstack" | "unknown";
+  backend: "floci" | "ministack" | "localstack" | "unknown";
   endpoint: string;
   healthPath: string | null;
   details?: unknown;
 }
 
-const HEALTH_PATHS = ["/_ministack/health", "/_localstack/health"];
+const HEALTH_PATHS = ["/_floci/health", "/_localstack/health", "/_ministack/health"];
 const HEALTH_REQUEST_TIMEOUT_MS = 2_500;
 
 export async function checkAwsEmulatorHealth(): Promise<EmulatorHealthCheck> {
@@ -44,6 +44,7 @@ export async function checkAwsEmulatorHealth(): Promise<EmulatorHealthCheck> {
       return {
         isReachable: true,
         backend:
+          healthPath === "/_floci/health" ? "floci" :
           healthPath === "/_ministack/health" ? "ministack" : "localstack",
         endpoint,
         healthPath,

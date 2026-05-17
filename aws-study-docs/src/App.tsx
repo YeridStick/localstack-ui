@@ -8,8 +8,6 @@ import { EventDrivenArchitecture } from './pages/EventDrivenArchitecture'
 import { DataPipelineArchitecture } from './pages/DataPipelineArchitecture'
 import { VPCNetworking } from './pages/VPCNetworking'
 import { SecurityBestPractices } from './pages/SecurityBestPractices'
-import { InfrastructureDesignerPage } from './pages/InfrastructureDesignerPage'
-import { PipelineDesignerPage } from './pages/PipelineDesignerPage'
 
 function App() {
   return (
@@ -23,8 +21,6 @@ function App() {
         <Route path="/data-pipeline" element={<DataPipelineArchitecture />} />
         <Route path="/vpc-networking" element={<VPCNetworking />} />
         <Route path="/security" element={<SecurityBestPractices />} />
-        <Route path="/ai/infrastructure" element={<InfrastructureDesignerPage />} />
-        <Route path="/ai/pipeline" element={<PipelineDesignerPage />} />
       </Routes>
     </Layout>
   )

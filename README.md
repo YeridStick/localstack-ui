@@ -1,6 +1,6 @@
 # localstack-ui
 
-Local AWS console for MiniStack/LocalStack.
+Local AWS console for Floci/MiniStack/LocalStack.
 
 Goal: run fast, learn fast, and practice AWS flows locally with a UI close to the AWS Console.
 
@@ -9,7 +9,7 @@ Goal: run fast, learn fast, and practice AWS flows locally with a UI close to th
 There are three layers:
 
 1. Docker runs containers.
-2. MiniStack/LocalStack exposes AWS-compatible endpoints.
+2. Floci/MiniStack/LocalStack exposes AWS-compatible endpoints.
 3. This Next.js app uses AWS SDK against those endpoints.
 
 Your app talks to the emulator endpoint (not to Docker directly for resource operations).
@@ -67,7 +67,13 @@ npm run compose:ecr-real:up
 
 ## Quick start (manual)
 
-1. Run MiniStack (default mode):
+1. Run Floci (recommended):
+
+```bash
+docker run -d --name floci -p 4566:4566 floci/floci:latest
+```
+
+Alternative: MiniStack (default mode):
 
 ```bash
 docker run -d --name ministack -p 4566:4566 ministackorg/ministack

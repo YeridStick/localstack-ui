@@ -1,6 +1,6 @@
 services:
-  ministack:
-    image: ministackorg/ministack:latest
+  floci:
+    image: floci/floci:latest
     ports:
       - "4566:4566"
     restart: unless-stopped
@@ -10,9 +10,9 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - ministack
+      - floci
     environment:
-      AWS_ENDPOINT_URL: http://ministack:4566
+      AWS_ENDPOINT_URL: http://floci:4566
       NEXT_PUBLIC_LOCALSTACK_ENDPOINT: http://localhost:4566
       AWS_REGION: us-east-1
       NEXT_PUBLIC_AWS_REGION: us-east-1

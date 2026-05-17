@@ -1,23 +1,23 @@
 services:
-  localstack:
-    image: ministackorg/ministack:latest
+  floci:
+    image: floci/floci:latest
     privileged: true
     ports:
       - "4566:4566"
       - "4510:4510"
     environment:
-      # MiniStack no requiere auth token
+      # Floci es compatible con LocalStack
       SERVICES: ecr,ecs,ec2,sts,iam,s3,cloudformation,apigateway,lambda,logs,cloudwatch,events,sqs,secretsmanager,dynamodb,rds
       ECR_ENDPOINT_STRATEGY: port
       # Habilitar contenedores reales para EC2
       EC2_VM_PROVIDER: docker
     volumes:
-      - ministack-data:/var/lib/ministack
+      - floci-data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       default:
         aliases:
-          - ministack
+          - floci
     restart: unless-stopped
 
   localstack-ui:
@@ -25,9 +25,9 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - localstack
+      - floci
     environment:
-      AWS_ENDPOINT_URL: http://ministack:4566
+      AWS_ENDPOINT_URL: http://floci:4566
       NEXT_PUBLIC_LOCALSTACK_ENDPOINT: http://localhost:4566
       AWS_REGION: us-east-1
       NEXT_PUBLIC_AWS_REGION: us-east-1
@@ -78,4 +78,4 @@ services:
 
 volumes:
   localstack-data:
-  ministack-data:
+  floci-data:
