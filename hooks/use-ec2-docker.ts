@@ -33,10 +33,10 @@ export function useDockerInstances() {
       const data = await response.json();
       return (data.instances || []) as DockerInstance[];
     },
-    // No auto-refresh - only manual refresh via queryClient.invalidateQueries
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    // Keep data fresh when navigating from EKS to EC2, where node instances are created.
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 }
 

@@ -13,6 +13,10 @@ import { ec2Client } from "@/lib/aws-config";
 export const DEFAULT_K3S_IMAGE = "rancher/k3s:v1.30.6-k3s1";
 export const DEFAULT_KUBERNETES_VERSION = "1.30";
 const DEFAULT_NODEPORT = 30080;
+const DEFAULT_LOCAL_REGISTRY_HOST = "host.docker.internal";
+const DEFAULT_LOCAL_REGISTRY_PORT = 5100;
+const DEFAULT_ECR_REGISTRY_ACCOUNT = "000000000000";
+const K3S_PRIVATE_REGISTRY_PATH = "/etc/rancher/k3s/registries.yaml";
 
 const EKS_ROOT = path.join(process.cwd(), ".localstack-ui", "eks");
 const CLUSTER_STATE_DIR = path.join(EKS_ROOT, "clusters");
@@ -123,6 +127,68 @@ function parseCpuPercent(value: string): number {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function resolveLocalRegistryHost(): string {
+  const host = (process.env.EKS_LOCAL_REGISTRY_HOST || "").trim();
+  return host || DEFAULT_LOCAL_REGISTRY_HOST;
+}
+
+function resolveLocalRegistryPort(): number {
+  const envValue =
+    process.env.EKS_LOCAL_REGISTRY_PORT ||
+    process.env.FLOCI_SERVICES_ECR_REGISTRY_BASE_PORT;
+  const parsed = Number.parseInt(String(envValue || ""), 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return DEFAULT_LOCAL_REGISTRY_PORT;
+  }
+  return parsed;
+}
+
+function buildK3sRegistryConfigYaml(): string {
+  const registryHost = resolveLocalRegistryHost();
+  const registryPort = resolveLocalRegistryPort();
+  const region = (process.env.AWS_REGION || "us-east-1").trim() || "us-east-1";
+  const account =
+    (process.env.AWS_ACCOUNT_ID || DEFAULT_ECR_REGISTRY_ACCOUNT).trim() ||
+    DEFAULT_ECR_REGISTRY_ACCOUNT;
+  const localRegistry = `${registryHost}:${registryPort}`;
+  const ecrDomainRegistry = `${account}.dkr.ecr.${region}.localhost:${registryPort}`;
+
+  return [
+    "mirrors:",
+    `  "${localRegistry}":`,
+    "    endpoint:",
+    `      - "http://${localRegistry}"`,
+    `  "${ecrDomainRegistry}":`,
+    "    endpoint:",
+    `      - "http://${localRegistry}"`,
+    "configs:",
+    `  "${localRegistry}":`,
+    "    tls:",
+    "      insecure_skip_verify: true",
+    `  "${ecrDomainRegistry}":`,
+    "    tls:",
+    "      insecure_skip_verify: true",
+    "",
+  ].join("\n");
+}
+
+function buildK3sBootstrapScript(role: "server" | "agent"): string {
+  const registryConfig = buildK3sRegistryConfigYaml().replace(/\r/g, "");
+  const launchCommand =
+    role === "server"
+      ? `exec k3s server --disable traefik --write-kubeconfig-mode=644 --private-registry ${K3S_PRIVATE_REGISTRY_PATH}`
+      : `exec k3s agent --private-registry ${K3S_PRIVATE_REGISTRY_PATH}`;
+
+  return [
+    "set -eu",
+    "mkdir -p /etc/rancher/k3s",
+    `cat <<'EOF' > ${K3S_PRIVATE_REGISTRY_PATH}`,
+    registryConfig,
+    "EOF",
+    launchCommand,
+  ].join("\n");
 }
 
 async function runDocker(
@@ -422,6 +488,8 @@ async function createEksNode(
         "--network",
         cluster.networkName,
         "--privileged",
+        "--add-host",
+        "host.docker.internal:host-gateway",
         "-p",
         `0:${DEFAULT_NODEPORT}`,
         "--label",
@@ -450,8 +518,11 @@ async function createEksNode(
         `K3S_URL=https://${cluster.controlPlane.containerName}:6443`,
         "-e",
         `K3S_TOKEN=${token}`,
+        "--entrypoint",
+        "sh",
         cluster.nodeGroup.nodeImage,
-        "agent",
+        "-lc",
+        buildK3sBootstrapScript("agent"),
       ],
       { timeoutMs: 120_000 },
     );
@@ -610,6 +681,8 @@ export async function createLocalEksCluster(
         "--network",
         networkName,
         "--privileged",
+        "--add-host",
+        "host.docker.internal:host-gateway",
         "-p",
         "0:6443",
         "--label",
@@ -620,11 +693,11 @@ export async function createLocalEksCluster(
         `localstack-ui.eks.cluster-id=${clusterId}`,
         "--label",
         "localstack-ui.eks.role=control-plane",
+        "--entrypoint",
+        "sh",
         DEFAULT_K3S_IMAGE,
-        "server",
-        "--disable",
-        "traefik",
-        "--write-kubeconfig-mode=644",
+        "-lc",
+        buildK3sBootstrapScript("server"),
       ],
       { timeoutMs: 120_000 },
     );
